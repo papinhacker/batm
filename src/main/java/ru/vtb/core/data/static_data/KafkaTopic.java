@@ -71,32 +71,48 @@ public enum KafkaTopic {
     BATM_REPORT_IN_BATM_TRANS_AGR_TRANSACTION("batm_report-in-batm_trans_agr-transaction", BatmReportInBatmTransAgrTransactionRootMessage.class),
     BATM_ACC_ROUTE_PP_OUT_BATM_TRANS_PP_RESULT("batm_acc_route_pp-out-batm_trans-pp_result", BatmAccRoutePpOutBatmTransPpResultRootMessage.class),
     BATM_TRANS_OUT_BATM_DP_STREAMING("batm_trans-out-batm_dp-streaming"),
-    BATM_DP_IN_BATM_DEVICES_ATM("batm_dp-in-batm_devices-atm", BatmDpInBatmDevicesAtmRootMessage.class);
+    BATM_DP_IN_BATM_DEVICES_ATM("batm_dp-in-batm_devices-atm", BatmDpInBatmDevicesAtmRootMessage.class),
+
+    //TODO заглушка: имя топика UASP для ФИ (в тест-кейсах: ***_batm_uasp_retail_adm_atm_cash_money_transfer_instruction)
+    UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION("STUB_batm_uasp_retail_adm_atm_cash_money_transfer_instruction", KafkaCluster.UASP),
+    //TODO заглушка: имя топика UASP для ФТ (в тест-кейсах: ***_batm_uasp_retail_adm_atm_cash_money_transfer_transaction)
+    UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION("STUB_batm_uasp_retail_adm_atm_cash_money_transfer_transaction", KafkaCluster.UASP),
+    ODS_BATMADMIN_OUTBOX("tsss.batmadmin.outbox", KafkaCluster.ODS);
 
     private final String topicName;
     private final Map<Long, String> topicMap;
     private final Class<?> defaultDeserializationClass;
+    private final KafkaCluster cluster;
 
-    KafkaTopic(String topicName, Class<?> clazz) {
+    KafkaTopic(String topicName, Class<?> clazz, KafkaCluster cluster) {
         this.topicName = topicName;
         this.topicMap = new ConcurrentHashMap<>();
         this.defaultDeserializationClass = clazz;
+        this.cluster = cluster;
+    }
+
+    KafkaTopic(String topicName, Class<?> clazz) {
+        this(topicName, clazz, KafkaCluster.BATM);
+    }
+
+    KafkaTopic(String topicName, KafkaCluster cluster) {
+        this(topicName, String.class, cluster);
     }
 
     KafkaTopic(String topicName) {
-        this(topicName, String.class);
+        this(topicName, String.class, KafkaCluster.BATM);
     }
 
-    public static Map<Long, String> getTopicStorageByName(String topicName) {
+    public static Map<Long, String> getTopicStorageByName(KafkaCluster cluster, String topicName) {
         for (KafkaTopic topic : values()) {
-            if (topicName.equals(topic.getTopicName()))
+            if (topic.getCluster() == cluster && topicName.equals(topic.getTopicName()))
                 return topic.getTopicMap();
         }
         throw new RuntimeException("Unable to recognize topic by provided topic name");
     }
 
-    public static List<String> getAllTopicsNames() {
-        return Arrays.stream(values()).map(KafkaTopic::getTopicName).toList();
+    public static List<String> getTopicsNames(KafkaCluster cluster) {
+        return Arrays.stream(values()).filter(t -> t.getCluster() == cluster).map(KafkaTopic::getTopicName).toList();
     }
 
     public String getTopicName() {
@@ -109,5 +125,9 @@ public enum KafkaTopic {
 
     public Class<?> getDefClass() {
         return this.defaultDeserializationClass;
+    }
+
+    public KafkaCluster getCluster() {
+        return this.cluster;
     }
 }

@@ -13,25 +13,34 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import ru.vtb.core.common.EnvConstants;
 import ru.vtb.core.common.Log;
+import ru.vtb.core.data.static_data.KafkaCluster;
 import ru.vtb.core.data.static_data.KafkaTopic;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class KafkaClient {
 
-    private static final AtomicBoolean isReadingThreadRunning = new AtomicBoolean(false);
+    private static final Set<KafkaCluster> readingClusters = ConcurrentHashMap.newKeySet();
     private final Properties clientConfig;
 
     public KafkaClient() {
+        this(KafkaCluster.BATM);
+    }
+
+    /**
+     * @param cluster кластер, к которому подключается клиент. SSL-настройки общие для всех кластеров
+     */
+    public KafkaClient(KafkaCluster cluster) {
         Properties properties = new Properties();
-        properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, EnvConstants.BOOTSTRAP_SERVERS);
+        properties.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, cluster.getBootstrapServers());
         properties.put(CommonClientConfigs.SECURITY_PROTOCOL_CONFIG, SecurityProtocol.SSL.name);
         properties.put(SslConfigs.SSL_TRUSTSTORE_LOCATION_CONFIG, EnvConstants.SSL_TRUSTSTORE_LOCATION);
         properties.put(SslConfigs.SSL_TRUSTSTORE_PASSWORD_CONFIG, EnvConstants.SSL_TRUSTSTORE_PASSWORD);
@@ -48,12 +57,12 @@ public class KafkaClient {
         this.clientConfig = properties;
     }
 
-    public static void startReadingTopics(List<String> topics) {
-        if (isReadingThreadRunning.compareAndSet(false, true)) {
-            Log.trace("About to starting main consumer");
+    public static void startReadingTopics(KafkaCluster cluster, List<String> topics) {
+        if (readingClusters.add(cluster)) {
+            Log.trace("About to starting consumer for '%s' kafka cluster".formatted(cluster));
             ExecutorService executorService = Executors.newSingleThreadExecutor();
             executorService.submit(() -> {
-                try (var consumer = new KafkaClient()
+                try (var consumer = new KafkaClient(cluster)
                         .addConfig(Map.of(
                                 ConsumerConfig.GROUP_ID_CONFIG,
                                 "Test Automation Consumer " + UUID.randomUUID()))
@@ -63,7 +72,7 @@ public class KafkaClient {
                         ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(200));
                         for (ConsumerRecord<String, String> rec : records) {
                             Log.trace("Catching message with offset '%s' from topic '%s'".formatted(rec.offset(), rec.topic()));
-                            KafkaTopic.getTopicStorageByName(rec.topic()).put(rec.offset(), rec.value());
+                            KafkaTopic.getTopicStorageByName(cluster, rec.topic()).put(rec.offset(), rec.value());
                         }
                     }
                 } catch (Exception e) {
@@ -72,8 +81,15 @@ public class KafkaClient {
                 }
             });
         } else {
-            throw new RuntimeException("Поток с чтением топиков кафки может быть запущен только ОДИН раз");
+            throw new RuntimeException("Поток с чтением топиков кафки может быть запущен только ОДИН раз для кластера " + cluster);
         }
+    }
+
+    /**
+     * @return true, если для кластера запущен поток чтения топиков
+     */
+    public static boolean isReadingStarted(KafkaCluster cluster) {
+        return readingClusters.contains(cluster);
     }
 
     public KafkaClient addConfig(Map<Object, Object> configMap) {

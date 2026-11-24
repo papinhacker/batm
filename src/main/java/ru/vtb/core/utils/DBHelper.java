@@ -537,6 +537,61 @@ public class DBHelper {
                     """;
             return getFirstColumnResults(batmOutbox.getRowLinesFromDB(query.formatted(formatListForInStatement(messageIds))));
         }
+
+        /**
+         * Запись об инструкции без ожидания (для поллинга)
+         *
+         * @param instructionId - id инструкции
+         */
+        public static List<Map<String, Object>> getInstructionRows(String instructionId) {
+            String query = """
+                    select *
+                    from batm_outbox.instruction
+                    where instruction_id = '%s'
+                    """;
+            return batmOutbox.getRowLinesFromDB(query.formatted(instructionId), false);
+        }
+
+        /**
+         * Запись о транзакции без ожидания (для поллинга)
+         *
+         * @param transactionId - id транзакции
+         */
+        public static List<Map<String, Object>> getTransactionRows(String transactionId) {
+            String query = """
+                    select *
+                    from batm_outbox.transaction
+                    where id = '%s'
+                    """;
+            return batmOutbox.getRowLinesFromDB(query.formatted(transactionId), false);
+        }
+
+        /**
+         * message_id записей из msg_content_0 и msg_content_1 по ключу
+         *
+         * @param key - id инструкции или транзакции
+         */
+        public static List<String> getOutboxMessageIdsByKey(String key) {
+            String query = """
+                    select message_id
+                    from batm_outbox.msg_content_0
+                    where key = '%s'
+                    union all
+                    select message_id
+                    from batm_outbox.msg_content_1
+                    where key = '%s'
+                    """;
+            return getFirstColumnResults(batmOutbox.getRowLinesFromDB(query.formatted(key, key), TIMEOUT));
+        }
+
+        public static List<Map<String, Object>> getOutboxMessagesSent(List<String> messageIds) {
+            String query = """
+                    select *
+                    from msg_sent
+                    where message_id in (%s)
+                    """;
+            return batmOutbox.getRowLinesFromDB(query.formatted(formatListForInStatement(messageIds)), TIMEOUT);
+        }
     }
 
     public static class BatmAccRouteS3 {

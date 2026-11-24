@@ -6,11 +6,13 @@ import org.testng.annotations.ITestAnnotation;
 import org.testng.xml.XmlSuite;
 import ru.vtb.core.common.Log;
 import ru.vtb.core.common.RetryAnalyzer;
+import ru.vtb.core.data.static_data.KafkaCluster;
 import ru.vtb.core.data.static_data.KafkaTopic;
 import ru.vtb.core.utils.KafkaClient;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.List;
 
 public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMethodListener, IReporter, IAnnotationTransformer {
 
@@ -52,6 +54,17 @@ public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMe
     }
 
     private void initKafkaConsumers() {
-        KafkaClient.startReadingTopics(KafkaTopic.getAllTopicsNames());
+        for (KafkaCluster cluster : KafkaCluster.values()) {
+            List<String> topics = KafkaTopic.getTopicsNames(cluster);
+            if (topics.isEmpty()) {
+                continue;
+            }
+            if (cluster.isConfigured()) {
+                KafkaClient.startReadingTopics(cluster, topics);
+            } else {
+                Log.warning("Kafka-кластер '%s' не настроен (пустое свойство '%s'), топики %s читаться не будут"
+                        .formatted(cluster, cluster.getBootstrapServersPropertyKey(), topics));
+            }
+        }
     }
 }

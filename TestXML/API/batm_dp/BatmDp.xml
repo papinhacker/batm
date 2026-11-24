@@ -62,4 +62,84 @@
         </classes>
     </test>
 
+    <test name="BATM-658">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM658"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-659">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM659"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-660">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM660"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-661">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM661"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-662">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM662"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-663">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM663"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-664">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM664"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-665">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpStreamingTests">
+                <methods>
+                    <include name="testBATM665"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
 </suite>

@@ -73,6 +73,9 @@ public class EnvConstants {
     public static final String SSL_KEYSTORE_TYPE = getProperty("ssl.keystore.type");
     public static final String SSL_KEYSTORE_LOCATION = CERTIFICATION_LOCATION.formatted("-batm-keystore.p12");
     public static final String SSL_KEYSTORE_PASSWORD = getEncryptedProperty("ssl.keystore.password");
+    /* дополнительные кластеры kafka (SSL-настройки общие с основной кафкой) */
+    public static final String UASP_BOOTSTRAP_SERVERS = getProperty("kafka.uasp.bootstrap.servers");
+    public static final String ODS_BOOTSTRAP_SERVERS = getProperty("kafka.ods.bootstrap.servers");
 
     /* clearing decoding */
     public static final String CLEARING_SIGNATURE_FILE = MAIN_RESOURCES_FOLDER + FILE_SEPARATOR + "clearing" + FILE_SEPARATOR + getProperty("clearing.decoding.signature.filename");
