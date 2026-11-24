@@ -1,0 +1,27 @@
+{
+  "header": {
+    "version": "1.0",
+    "messageId": "5e165418-09ed-4f74-b831-5e28dedf7695",
+    "messageDate": "2024-11-06T07:25:11.511105479Z"
+  },
+  "body": {
+    "atmStatus": "operating",
+    "atmId": "LC151190",
+    "absBaseBranch": "00000",
+    "accounts": [
+      {
+        "currency": "840",
+        "number": "20208840151190812411"
+      },
+      {
+        "currency": "643",
+        "number": "20208810151190812411"
+      },
+      {
+        "currency": "978",
+        "number": "20208978151190812411"
+      }
+    ],
+    "deviceType": "atm"
+  }
+}

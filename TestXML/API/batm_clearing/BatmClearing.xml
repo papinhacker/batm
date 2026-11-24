@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-clearing">
+
+    <test name="BATM-242">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM242"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-338">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM338"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-346">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM346"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-349">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM349"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-401">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM401"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-402">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM402"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-414">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM414"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-419">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM419"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-420">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM420"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-421">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM421"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-422">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM422"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-423">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM423"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-424">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM424"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-425">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM425"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-426">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM426"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-427">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM427"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-428">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM428"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-429">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM429"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+
+    <test name="BATM-430">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM430"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-505">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_clearing.BatmClearingTests">
+                <methods>
+                    <include name="testBATM505"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

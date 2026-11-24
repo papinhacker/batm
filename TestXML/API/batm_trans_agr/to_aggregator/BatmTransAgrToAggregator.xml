@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-transactions-agr">
+
+    <test name="BATM-337">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM337"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-341">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM341"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-342">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM342"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-437">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM437"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-438">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM438"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-439">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM439"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-477">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM477"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-478">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+                <methods>
+                    <include name="testBATM478"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

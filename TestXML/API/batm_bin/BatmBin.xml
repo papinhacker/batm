@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-bin">
+
+    <test name="BATM-277">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_bin.BatmBinTests">
+                <methods>
+                    <include name="testBATM277"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-279">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_bin.BatmBinTests">
+                <methods>
+                    <include name="testBATM279"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

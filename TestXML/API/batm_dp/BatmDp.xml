@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-dp">
+
+    <test name="BATM-298">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpTests">
+                <methods>
+                    <include name="testBATM298"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-299">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpTests">
+                <methods>
+                    <include name="testBATM299"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-400">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpTests">
+                <methods>
+                    <include name="testBATM400"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-300">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpTests">
+                <methods>
+                    <include name="testBATM300"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-301">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpTests">
+                <methods>
+                    <include name="testBATM301"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-302">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_dp.BatmDpTests">
+                <methods>
+                    <include name="testBATM302"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

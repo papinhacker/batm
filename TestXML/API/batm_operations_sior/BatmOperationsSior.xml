@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-operations-sior">
+
+    <test name="BATM-416">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_operations_sior.BatmOperationsSiorTests">
+                <methods>
+                    <include name="testBATM416"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

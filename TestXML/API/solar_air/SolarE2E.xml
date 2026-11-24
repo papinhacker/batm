@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="solar-e2e-suite">
+
+    <test name="BATM-286">
+        <classes>
+            <class name="ru.vtb.api.tests.end_to_end.SolarEndToEnds">
+                <methods>
+                    <include name="testSolarE2e"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-287">
+        <classes>
+            <class name="ru.vtb.api.tests.end_to_end.SolarEndToEnds">
+                <methods>
+                    <include name="testSolarE2e"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-288">
+        <classes>
+            <class name="ru.vtb.api.tests.end_to_end.SolarEndToEnds">
+                <methods>
+                    <include name="testSolarE2e"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-289">
+        <classes>
+            <class name="ru.vtb.api.tests.end_to_end.SolarEndToEnds">
+                <methods>
+                    <include name="testSolarE2e"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-290">
+        <classes>
+            <class name="ru.vtb.api.tests.end_to_end.SolarEndToEnds">
+                <methods>
+                    <include name="testSolarE2e"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-291">
+        <classes>
+            <class name="ru.vtb.api.tests.end_to_end.SolarEndToEnds">
+                <methods>
+                    <include name="testSolarE2e"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

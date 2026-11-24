@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 http://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <profiles>
+        <profile>
+            <id>scp</id>
+            <repositories>
+                <repository>
+                    <id>batm-at-maven-proxy-group</id>
+                    <url>https://sfera.test.vtb.ru/app/repo-cdl-maven/api/repository/batm-at-maven-proxy-group/</url>
+                </repository>
+            </repositories>
+            <pluginRepositories>
+                <pluginRepository>
+                    <id>batm-at-maven-proxy-group</id>
+                    <name>plugins-release</name>
+                    <url>https://sfera.test.vtb.ru/app/repo-cdl-maven/api/repository/batm-at-maven-proxy-group/</url>
+                </pluginRepository>
+            </pluginRepositories>
+        </profile>
+    </profiles>
+
+    <servers>
+        <server>
+            <id>batm-at-maven-proxy-group</id>
+            <username>${MVN_USR}</username>
+            <password>${MVN_PSW}</password>
+        </server>
+    </servers>
+
+    <mirrors>
+        <mirror>
+            <id>batm-at-maven-proxy-group</id>
+            <mirrorOf>central</mirrorOf>
+            <url>https://sfera.test.vtb.ru/app/repo-cdl-maven/api/repository/batm-at-maven-proxy-group/</url>
+        </mirror>
+    </mirrors>
+</settings>

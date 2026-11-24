@@ -1,0 +1,24 @@
+{
+  "header": {
+    "protocol": {
+      "name": "solar-ws",
+      "version": "2.0"
+    },
+    "messageId": "6ac61898-e8c6-4a29-8a59-400f6809fef8",
+    "messageDate": "2025-04-22T14:38:38.047871248",
+    "originator": {
+      "system": "EXTERNAL"
+    }
+  },
+  "body": {
+    "response": {
+      "type": "SUCCESS",
+      "code": "SLR-0001",
+      "message": "Successfully completed"
+    },
+    "account": {
+      "id": 41841306651067648,
+      "accountNumber": "20208810151190000771"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-transactions-agr">
+
+    <test name="BATM-481">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.BatmTransAgrTests">
+                <methods>
+                    <include name="testBATM481"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-482">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.BatmTransAgrTests">
+                <methods>
+                    <include name="testBATM482"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-483">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.BatmTransAgrTests">
+                <methods>
+                    <include name="testBATM483"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-484">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_trans_agr.BatmTransAgrTests">
+                <methods>
+                    <include name="testBATM484"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

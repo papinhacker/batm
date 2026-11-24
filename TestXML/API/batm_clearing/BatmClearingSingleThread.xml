@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-clearing" parallel="none">
+
+    <test name="BATM-283">
+        <classes>
+            <class name="ru.vtb.api.tests.single_thread.BatmClearingSingleThreadTests">
+                <methods>
+                    <include name="testBATM283"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

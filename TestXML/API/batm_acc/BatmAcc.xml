@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-acc">
+
+    <test name="BATM-330">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_acc.BatmAccTests">
+                <methods>
+                    <include name="testBATM330"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-334">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_acc.BatmAccTests">
+                <methods>
+                    <include name="testBATM334"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-335">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_acc.BatmAccTests">
+                <methods>
+                    <include name="testBATM335"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-336">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_acc.BatmAccTests">
+                <methods>
+                    <include name="testBATM336"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-397">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_acc.BatmAccTests">
+                <methods>
+                    <include name="testBATM397"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-509">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_acc.BatmAccTests">
+                <methods>
+                    <include name="testBATM509"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

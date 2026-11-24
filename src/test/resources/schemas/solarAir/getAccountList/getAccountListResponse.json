@@ -1,0 +1,47 @@
+{
+  "header": {
+    "protocol": {
+      "name": "solar-ws",
+      "version": "2.0"
+    },
+    "messageId": "12aa4e55-d871-4276-a265-b843c0526771",
+    "messageDate": "2025-04-22T14:38:37.96321309",
+    "originator": {
+      "system": "EXTERNAL"
+    }
+  },
+  "body": {
+    "response": {
+      "type": "SUCCESS",
+      "code": "SLR-0001",
+      "message": "Successfully completed"
+    },
+    "accounts": {
+      "account": [
+        {
+          "id": 41841301597717760,
+          "finInstitution": {
+            "id": 35203354782598144,
+            "code": "00000",
+            "name": "Банк ВТБ (ПАО)"
+          },
+          "agreement": {
+            "id": 41841301520123136,
+            "number": "A-0000-DC151190-M"
+          },
+          "accountType": {
+            "id": 36134053102486528,
+            "code": "20208",
+            "name": "Денежные средства в УС"
+          },
+          "accountCategory": "ANALYTIC",
+          "currency": "810",
+          "accountAmount": 0,
+          "accountStatus": "ACTIVE",
+          "accountNumber": "20208810151190000770",
+          "accountOpenDate": "2025-04-22"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="test-environment-preparation">
+
+    <test name="update operation day">
+        <classes>
+            <class name="ru.vtb.common.PrepareTestEnvironment">
+                <methods>
+                    <include name="updateOperday"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="update zod start time">
+        <classes>
+            <class name="ru.vtb.common.PrepareTestEnvironment">
+                <methods>
+                    <include name="updateZodStartTime"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="truncate table transactions in route S3">
+        <classes>
+            <class name="ru.vtb.common.PrepareTestEnvironment">
+                <methods>
+                    <include name="truncateTransactionsInRouteS3"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

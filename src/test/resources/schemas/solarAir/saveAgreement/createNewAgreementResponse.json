@@ -1,0 +1,23 @@
+{
+  "header": {
+    "protocol": {
+      "name": "solar-ws",
+      "version": "2.0"
+    },
+    "messageId": "12aa4e55-d871-4276-a265-b843c0526770",
+    "messageDate": "2025-04-14T10:25:11.511105479",
+    "originator": {
+      "system": "IS-2213"
+    }
+  },
+  "body": {
+    "response": {
+      "type": "SUCCESS",
+      "code": "SLR-0001",
+      "message": "Successfully completed"
+    },
+    "agreement": {
+      "id": 41841301520123136
+    }
+  }
+}

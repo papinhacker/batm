@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="batm-integr-sior">
+
+    <test name="BATM-197">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM197"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-275">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM275"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-292">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM292"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-310">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM310"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-311">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM311"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-312">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM312"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-347">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM347"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-348">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM348"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-418">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM418"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-434">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM434"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-435">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM435"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <test name="BATM-436">
+        <classes>
+            <class name="ru.vtb.api.tests.batm_devices.BatmSiorIntegrationTests">
+                <methods>
+                    <include name="testBATM436"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

@@ -1,0 +1,57 @@
+package ru.vtb.core.common.listeners;
+
+import io.qameta.allure.Allure;
+import org.testng.*;
+import org.testng.annotations.ITestAnnotation;
+import org.testng.xml.XmlSuite;
+import ru.vtb.core.common.Log;
+import ru.vtb.core.common.RetryAnalyzer;
+import ru.vtb.core.data.static_data.KafkaTopic;
+import ru.vtb.core.utils.KafkaClient;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+
+public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMethodListener, IReporter, IAnnotationTransformer {
+
+    protected static int threadCount;
+
+    static {
+        String count = System.getProperty("threadCount");
+        threadCount = count.matches("\\d+") ? Integer.parseInt(count) : 1;
+    }
+
+    @Override
+    public void onStart(ISuite suite) {
+        String suiteName = suite.getName();
+        Log.info("Log level is '%s'".formatted(System.getProperty("loglevel")));
+        Log.info("Начинаем запуск набора тестов: " + suiteName);
+        System.setProperty("suitename", suiteName);
+        XmlSuite xmlSuite = suite.getXmlSuite();
+        xmlSuite.setName(suiteName);
+        if (threadCount > 1 && !suiteName.toLowerCase().contains("singleThread".toLowerCase())) {
+            xmlSuite.setParallel(XmlSuite.ParallelMode.TESTS);
+            xmlSuite.setThreadCount(threadCount);
+            xmlSuite.setPreserveOrder(true);
+        }
+        Log.info("Тесты будут запущенны в '%s' поток(а/ов)".formatted(String.valueOf(xmlSuite.getThreadCount())));
+        initKafkaConsumers();
+    }
+
+    @Override
+    public void onTestFailure(ITestResult result) {
+        Allure.addAttachment(
+                "Test console log",
+                "text/plain",
+                String.join("\n", Reporter.getOutput(result)));
+    }
+
+    @Override
+    public void transform(ITestAnnotation annotation, Class testClass, Constructor testConstructor, Method testMethod) {
+        annotation.setRetryAnalyzer(RetryAnalyzer.class);
+    }
+
+    private void initKafkaConsumers() {
+        KafkaClient.startReadingTopics(KafkaTopic.getAllTopicsNames());
+    }
+}
