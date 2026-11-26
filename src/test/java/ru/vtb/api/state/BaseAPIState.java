@@ -7,6 +7,7 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.BeforeSuite;
 import org.testng.annotations.Listeners;
 import ru.vtb.api.services.AgreementService;
 import ru.vtb.api.services.DeactivateAccessorService;
@@ -41,10 +42,21 @@ public class BaseAPIState extends SoftAssertVerification {
 
     protected S3Service s3Service;
 
+    /**
+     * Глобальная настройка RestAssured — один раз на сьют, до всех тестов (в т.ч. при parallel=tests).
+     * RestAssured.filters(...) добавляет фильтр в глобальный список, поэтому фильтр Allure добавляется,
+     * только если его там ещё нет: повторный вызов (несколько сьютов в одной JVM) дублей не создаёт.
+     */
+    @BeforeSuite(alwaysRun = true)
+    public void configureRestAssured() {
+        RestAssured.baseURI = EnvConstants.BASE_URI + "/solar-bridge-ws/ext";
+        if (RestAssured.filters().stream().noneMatch(AllureRestAssured.class::isInstance)) {
+            RestAssured.filters(/*new RequestLoggingFilter(), new ResponseLoggingFilter(),*/ new AllureRestAssured());
+        }
+    }
+
     @BeforeMethod
     public void setUp() {
-        RestAssured.baseURI = EnvConstants.BASE_URI + "/solar-bridge-ws/ext";
-        RestAssured.filters(/*new RequestLoggingFilter(), new ResponseLoggingFilter(),*/ new AllureRestAssured());
         agreementService = new AgreementService();
         deactivateAccessorService = new DeactivateAccessorService();
         getAccountListService = new GetAccountListService();

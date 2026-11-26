@@ -3,8 +3,9 @@ package ru.vtb.core.common;
 import io.qameta.allure.Allure;
 import org.testng.Reporter;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Класс для вывода логов, как в коносль, так и в аллюр, и в логи TestNG
@@ -19,7 +20,10 @@ import java.util.Date;
  */
 public class Log {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("(z) HH.mm.ss:SSS");
+    // DateTimeFormatter потокобезопасен (SimpleDateFormat — нет, а тесты идут параллельно).
+    // Зона и локаль фиксируются при загрузке класса, как и у прежнего статического SimpleDateFormat.
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("(z) HH.mm.ss:SSS")
+            .withZone(ZoneId.systemDefault());
     private static final int LOG_LEVEL;
     private static final ThreadLocal<Boolean> suppressed = ThreadLocal.withInitial(() -> false);
 
@@ -44,7 +48,7 @@ public class Log {
 
     public static void error(Object message) {
         if (LOG_LEVEL >= 1) {
-            Reporter.log("[ERROR] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[ERROR] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [ERROR] " + message.toString(), true);
         }
@@ -52,7 +56,7 @@ public class Log {
 
     public static void step(Object message) {
         if (LOG_LEVEL >= 10 && !suppressed.get()) {
-            Reporter.log("[STEP] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[STEP] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [STEP] " + message.toString(), true);
         }
@@ -61,7 +65,7 @@ public class Log {
 
     public static void assertFail(Object message) {
         if (LOG_LEVEL >= 11) {
-            Reporter.log("[ASSERTION FAILURE] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[ASSERTION FAILURE] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [ASSERTION FAILURE] " + message.toString(), true);
         }
@@ -69,7 +73,7 @@ public class Log {
 
     public static void warning(Object message) {
         if (LOG_LEVEL >= 25) {
-            Reporter.log("[WARNING] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[WARNING] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [WARNING] " + message.toString(), true);
         }
@@ -77,7 +81,7 @@ public class Log {
 
     public static void debug(Object message) {
         if (LOG_LEVEL >= 30) {
-            Reporter.log("[DEBUG] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[DEBUG] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [DEBUG] " + message.toString(), true);
         }
@@ -85,7 +89,7 @@ public class Log {
 
     public static void trace(Object message) {
         if (LOG_LEVEL >= 100) {
-            Reporter.log("[TRACE] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[TRACE] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [TRACE] " + message.toString(), true);
         }
@@ -93,7 +97,7 @@ public class Log {
 
     public static void info(Object message) {
         if (LOG_LEVEL != 0 && !suppressed.get()) {
-            Reporter.log("[INFO] " + DATE_FORMAT.format(new Date())
+            Reporter.log("[INFO] " + DATE_FORMAT.format(Instant.now())
                     + " - " + Thread.currentThread().getStackTrace()[2].getClassName()
                     + " [INFO] " + message.toString(), true);
         }
