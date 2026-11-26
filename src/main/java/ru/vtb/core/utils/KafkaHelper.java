@@ -78,24 +78,6 @@ public class KafkaHelper {
         return getLastRecord(topic, List.of(keyword), timeout);
     }
 
-    /**
-     * Возвращает последнее (по offset) сообщение топика в виде строки, удовлетворяющее условию.
-     * Если сообщение не найдено за timeout, тест падает.
-     *
-     * @param topic                топик
-     * @param condition            условие поиска по тексту сообщения (не должно бросать исключений)
-     * @param conditionDescription описание условия для логов и текста ошибки
-     * @param timeout              таймаут ожидания в секундах
-     */
-    public static String getLastRawRecord(KafkaTopic topic, Predicate<String> condition, String conditionDescription, long timeout) {
-        Log.step("Receiving LAST message from topic '%s', which matches: %s".formatted(topic.getTopicName(), conditionDescription));
-        String result = getRecord(topic, condition, timeout, SearchStrategy.LAST);
-        if (result == null) {
-            Assert.fail("Unable to find any message from topic '%s', which matches: %s".formatted(topic.getTopicName(), conditionDescription));
-        }
-        return result;
-    }
-
     public static Object getRecord(KafkaTopic topic, List<String> keywords, long timeout, boolean needFail, SearchStrategy searchStrategy) {
         Log.step("Receiving %s message from topic '%s', which contains '%s'".formatted(searchStrategy, topic.getTopicName(), String.join("; ", keywords)));
         String result = getRecord(topic, compilePredicate(keywords), timeout, searchStrategy);

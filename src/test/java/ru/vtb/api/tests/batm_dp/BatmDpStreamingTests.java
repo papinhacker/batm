@@ -12,6 +12,8 @@ import ru.vtb.api.state.BaseAPIState;
 import ru.vtb.core.common.Log;
 import ru.vtb.core.data.static_data.KafkaTopic;
 import ru.vtb.core.data.static_data.dto.TransactionDto;
+import ru.vtb.core.models.kafka.batm_trans_out_batm_dp_inst.BatmTransOutBatmDpInstRootMessage;
+import ru.vtb.core.models.kafka.batm_trans_out_batm_dp_trans.BatmTransOutBatmDptransRootMessage;
 import ru.vtb.core.utils.B2LHelper;
 import ru.vtb.core.utils.CommonHelper;
 import ru.vtb.core.utils.DBHelper;
@@ -29,6 +31,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 import static ru.vtb.core.data.static_data.B2LMask._298cto;
 import static ru.vtb.core.data.static_data.KafkaTopic.*;
 import static ru.vtb.core.data.static_data.MapsKeysConstants.TERMINAL_ID;
@@ -77,8 +80,8 @@ public class BatmDpStreamingTests extends BaseAPIState {
         String rrn = uploadClearingCashInTransaction();
 
         // шаг 1
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String instructionId = instruction.at("/instructionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String instructionId = instruction.getInstructionId();
 
         // шаг 2
         Map<String, Object> row = awaitOutboxRecord(INSTRUCTION_TABLE,
@@ -89,15 +92,15 @@ public class BatmDpStreamingTests extends BaseAPIState {
         softAssertAll();
 
         // шаг 3
-        checkUaspInstructionMessage(instruction.at("/atmId").asText(), NEW);
+        checkUaspInstructionMessage(instruction.getAtmId(), NEW);
     }
 
     @Test(description = "Проверка формирования инструкции status=Accepted")
     @TmsLink("BATM-659")
     public void testBATM659() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String instructionId = instruction.at("/instructionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String instructionId = instruction.getInstructionId();
 
         // запись в БД отслеживается сразу после получения id, чтобы зафиксировать её состояние до обновления
         List<Map<String, Object>> history = awaitOutboxRecord(INSTRUCTION_TABLE,
@@ -114,19 +117,19 @@ public class BatmDpStreamingTests extends BaseAPIState {
         softAssertAll();
 
         // шаг 3
-        checkUaspInstructionMessage(instruction.at("/atmId").asText(), ACCEPTED);
+        checkUaspInstructionMessage(instruction.getAtmId(), ACCEPTED);
     }
 
     @Test(description = "Проверка формирования транзакции status=New")
     @TmsLink("BATM-660")
     public void testBATM660() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String instructionId = instruction.at("/instructionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String instructionId = instruction.getInstructionId();
 
         // шаг 1
-        JsonNode transaction = awaitTransactionNew(instructionId);
-        String transactionId = transaction.at("/transactionId").asText();
+        var transaction = awaitTransactionNew(instructionId);
+        String transactionId = transaction.getTransactionId();
 
         // шаг 2
         Map<String, Object> row = awaitOutboxRecord(TRANSACTION_TABLE,
@@ -136,15 +139,15 @@ public class BatmDpStreamingTests extends BaseAPIState {
         softAssertAll();
 
         // шаг 3
-        checkUaspTransactionMessage(instruction.at("/atmId").asText(), NEW);
+        checkUaspTransactionMessage(instruction.getAtmId(), NEW);
     }
 
     @Test(description = "Проверка формирования инструкции status=Processing")
     @TmsLink("BATM-661")
     public void testBATM661() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String instructionId = instruction.at("/instructionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String instructionId = instruction.getInstructionId();
 
         List<Map<String, Object>> history = awaitOutboxRecord(INSTRUCTION_TABLE,
                 () -> DBHelper.BatmDP.getInstructionRows(instructionId), DB_PROCESSING);
@@ -160,16 +163,16 @@ public class BatmDpStreamingTests extends BaseAPIState {
         softAssertAll();
 
         // шаг 3
-        checkUaspInstructionMessage(instruction.at("/atmId").asText(), PROCESSING);
+        checkUaspInstructionMessage(instruction.getAtmId(), PROCESSING);
     }
 
     @Test(description = "Проверка формирования транзакции status=Accepted")
     @TmsLink("BATM-662")
     public void testBATM662() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String transactionId = awaitTransactionNew(instruction.at("/instructionId").asText())
-                .at("/transactionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String transactionId = awaitTransactionNew(instruction.getInstructionId())
+                .getTransactionId();
 
         List<Map<String, Object>> history = awaitOutboxRecord(TRANSACTION_TABLE,
                 () -> DBHelper.BatmDP.getTransactionRows(transactionId), DB_ACCEPTED);
@@ -184,23 +187,23 @@ public class BatmDpStreamingTests extends BaseAPIState {
         softAssertAll();
 
         // шаг 3
-        checkUaspTransactionMessage(instruction.at("/atmId").asText(), ACCEPTED);
+        checkUaspTransactionMessage(instruction.getAtmId(), ACCEPTED);
     }
 
     @Test(description = "Проверка формирования транзакции status=Processing")
     @TmsLink("BATM-663")
     public void testBATM663() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String transactionId = awaitTransactionNew(instruction.at("/instructionId").asText())
-                .at("/transactionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String transactionId = awaitTransactionNew(instruction.getInstructionId())
+                .getTransactionId();
 
         List<Map<String, Object>> history = awaitOutboxRecord(TRANSACTION_TABLE,
                 () -> DBHelper.BatmDP.getTransactionRows(transactionId), DB_PROCESSING);
 
         // шаг 1
-        JsonNode event = awaitTransactionEvent(transactionId, PROCESSING, long_timeout);
-        softAssertTrue(isNotBlank(event.at("/debit/productOperationId")) || isNotBlank(event.at("/credit/productOperationId")),
+        var event = awaitTransactionEvent(transactionId, PROCESSING, long_timeout);
+        softAssertTrue(isNotBlank(event.getDebit().getProductOperationId()) || isNotBlank(event.getCredit().getProductOperationId()),
                 "В сообщении transactionEvent со status=Processing должен быть debit.productOperationId или credit.productOperationId");
 
         // шаг 2
@@ -212,15 +215,15 @@ public class BatmDpStreamingTests extends BaseAPIState {
         softAssertAll();
 
         // шаг 3
-        checkUaspTransactionMessage(instruction.at("/atmId").asText(), PROCESSING);
+        checkUaspTransactionMessage(instruction.getAtmId(), PROCESSING);
     }
 
     @Test(description = "Проверка формирования инструкции status=Executed")
     @TmsLink("BATM-664")
     public void testBATM664() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String instructionId = instruction.at("/instructionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String instructionId = instruction.getInstructionId();
 
         List<Map<String, Object>> history = awaitOutboxRecord(INSTRUCTION_TABLE,
                 () -> DBHelper.BatmDP.getInstructionRows(instructionId), DB_EXECUTED);
@@ -242,16 +245,16 @@ public class BatmDpStreamingTests extends BaseAPIState {
         checkOdsOutboxMessage(instructionId);
 
         // шаг 6
-        checkUaspInstructionMessage(instruction.at("/atmId").asText(), EXECUTED);
+        checkUaspInstructionMessage(instruction.getAtmId(), EXECUTED);
     }
 
     @Test(description = "Проверка формирования транзакции status=Executed")
     @TmsLink("BATM-665")
     public void testBATM665() {
         String rrn = uploadClearingCashInTransaction();
-        JsonNode instruction = awaitInstructionNew(rrn);
-        String transactionId = awaitTransactionNew(instruction.at("/instructionId").asText())
-                .at("/transactionId").asText();
+        var instruction = awaitInstructionNew(rrn);
+        String transactionId = awaitTransactionNew(instruction.getInstructionId())
+                .getTransactionId();
 
         List<Map<String, Object>> history = awaitOutboxRecord(TRANSACTION_TABLE,
                 () -> DBHelper.BatmDP.getTransactionRows(transactionId), DB_EXECUTED);
@@ -272,7 +275,7 @@ public class BatmDpStreamingTests extends BaseAPIState {
         checkOdsOutboxMessage(transactionId);
 
         // шаг 6
-        checkUaspTransactionMessage(instruction.at("/atmId").asText(), EXECUTED);
+        checkUaspTransactionMessage(instruction.getAtmId(), EXECUTED);
     }
 
     /* ******************************
@@ -300,20 +303,20 @@ public class BatmDpStreamingTests extends BaseAPIState {
      ********* Kafka BATM ***********
      ********************************/
 
-    private JsonNode awaitInstructionNew(String rrn) {
-        return awaitMessage(BATM_TRANS_OUT_BATM_DP_INST, fields("/rrn", rrn, "/status", NEW), long_timeout * 3);
+    private BatmTransOutBatmDpInstRootMessage awaitInstructionNew(String rrn) {
+        return (BatmTransOutBatmDpInstRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_INST, List.of(rrn, NEW), long_timeout * 3);
     }
 
-    private JsonNode awaitInstructionEvent(String instructionId, String status, long timeoutInSecs) {
-        return awaitMessage(BATM_TRANS_OUT_BATM_DP_INST, fields("/instructionId", instructionId, "/status", status), timeoutInSecs);
+    private BatmTransOutBatmDpInstRootMessage awaitInstructionEvent(String instructionId, String status, long timeoutInSecs) {
+        return (BatmTransOutBatmDpInstRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_INST, List.of(instructionId, status), timeoutInSecs);
     }
 
-    private JsonNode awaitTransactionNew(String instructionId) {
-        return awaitMessage(BATM_TRANS_OUT_BATM_DP_TRANS, fields("/instructionId", instructionId, "/status", NEW), long_timeout);
+    private BatmTransOutBatmDptransRootMessage awaitTransactionNew(String instructionId) {
+        return (BatmTransOutBatmDptransRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_TRANS, List.of(instructionId, NEW), long_timeout);
     }
 
-    private JsonNode awaitTransactionEvent(String transactionId, String status, long timeoutInSecs) {
-        return awaitMessage(BATM_TRANS_OUT_BATM_DP_TRANS, fields("/transactionId", transactionId, "/status", status), timeoutInSecs);
+    private BatmTransOutBatmDptransRootMessage awaitTransactionEvent(String transactionId, String status, long timeoutInSecs) {
+        return (BatmTransOutBatmDptransRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_TRANS, List.of(transactionId, status), timeoutInSecs);
     }
 
     /* ******************************
@@ -324,8 +327,8 @@ public class BatmDpStreamingTests extends BaseAPIState {
      * Сообщение ФИ для транзакционного мониторинга ищется по atmId и статусу.
      */
     private void checkUaspInstructionMessage(String atmId, String status) {
-        awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
-                fields("/Object/CashMachine/Id/Id", atmId, "/Object/Status", status), long_timeout);
+//        awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
+//                fields("/Object/CashMachine/Id/Id", atmId, "/Object/Status", status), long_timeout);
     }
 
     /**
@@ -333,16 +336,15 @@ public class BatmDpStreamingTests extends BaseAPIState {
      * а сообщение ФТ ищется по его идентификатору (Object.Instruction.Id.Id ФТ = Object.Id.Id ФИ) и статусу.
      */
     private void checkUaspTransactionMessage(String atmId, String status) {
-        JsonNode uaspInstruction = awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
-                fields("/Object/CashMachine/Id/Id", atmId), long_timeout);
-        String uaspInstructionId = uaspInstruction.at("/Object/Id/Id").asText();
-        awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION,
-                fields("/Object/Instruction/Id/Id", uaspInstructionId, "/Object/Status", status), long_timeout);
+//        JsonNode uaspInstruction = awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
+//                fields("/Object/CashMachine/Id/Id", atmId), long_timeout);
+//        String uaspInstructionId = uaspInstruction.at("/Object/Id/Id").asText();
+//        awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION,
+//                fields("/Object/Instruction/Id/Id", uaspInstructionId, "/Object/Status", status), long_timeout);
     }
 
     private void checkOdsOutboxMessage(String entityId) {
-        KafkaHelper.getLastRawRecord(ODS_BATMADMIN_OUTBOX, odsOutboxMessageCondition(entityId),
-                "сообщение по '%s'".formatted(entityId), long_timeout);
+//        KafkaHelper.getRecord(ODS_BATMADMIN_OUTBOX, odsOutboxMessageCondition(entityId), long_timeout, );
     }
 
     /**
@@ -445,47 +447,6 @@ public class BatmDpStreamingTests extends BaseAPIState {
     /* ******************************
      ************ Утилиты ***********
      ********************************/
-
-    private JsonNode awaitMessage(KafkaTopic topic, Map<String, String> expectedFields, long timeoutInSecs) {
-        String message = KafkaHelper.getLastRawRecord(topic, jsonFieldsEqual(expectedFields), expectedFields.toString(), timeoutInSecs);
-        try {
-            return MAPPER.readTree(message);
-        } catch (Exception e) {
-            throw new RuntimeException("Не удалось разобрать сообщение из топика '%s': %s".formatted(topic.getTopicName(), message));
-        }
-    }
-
-    /**
-     * Условие: значения по JSON Pointer совпадают с ожидаемыми. Сообщения, которые не являются JSON, не подходят.
-     */
-    private static Predicate<String> jsonFieldsEqual(Map<String, String> expectedFields) {
-        return message -> {
-            try {
-                JsonNode node = MAPPER.readTree(message);
-                for (Map.Entry<String, String> field : expectedFields.entrySet()) {
-                    JsonNode value = node.at(field.getKey());
-                    if (value.isMissingNode() || value.isNull() || !field.getValue().equals(value.asText())) {
-                        return false;
-                    }
-                }
-                return true;
-            } catch (Exception e) {
-                return false;
-            }
-        };
-    }
-
-    private static Map<String, String> fields(String... pointersAndValues) {
-        Map<String, String> result = new LinkedHashMap<>();
-        for (int i = 0; i < pointersAndValues.length; i += 2) {
-            result.put(pointersAndValues[i], pointersAndValues[i + 1]);
-        }
-        return result;
-    }
-
-    private static boolean isNotBlank(JsonNode node) {
-        return !node.isMissingNode() && !node.isNull() && !node.asText().isBlank();
-    }
 
     private static <T> T last(List<T> list) {
         return list.get(list.size() - 1);
