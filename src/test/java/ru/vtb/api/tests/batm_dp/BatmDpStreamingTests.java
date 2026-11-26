@@ -86,7 +86,7 @@ public class BatmDpStreamingTests extends BaseAPIState {
         // шаг 2
         Map<String, Object> row = awaitOutboxRecord(INSTRUCTION_TABLE,
                 () -> DBHelper.BatmDP.getInstructionRows(instructionId), null).get(0);
-        softAssertValue(row, "service", SERVICE, INSTRUCTION_TABLE);
+        softAssertEquals(row.get("service"), SERVICE, "Поле 'service' в %s".formatted(INSTRUCTION_TABLE));
         softAssertNull(row.get("sent_to_dp"), "Поле 'sent_to_dp' в %s должно быть NULL".formatted(INSTRUCTION_TABLE));
         softAssertNull(row.get("execution_dt"), "Поле 'execution_dt' в %s должно быть NULL".formatted(INSTRUCTION_TABLE));
         softAssertAll();
@@ -134,7 +134,7 @@ public class BatmDpStreamingTests extends BaseAPIState {
         // шаг 2
         Map<String, Object> row = awaitOutboxRecord(TRANSACTION_TABLE,
                 () -> DBHelper.BatmDP.getTransactionRows(transactionId), null).get(0);
-        softAssertValue(row, "service", SERVICE, TRANSACTION_TABLE);
+        softAssertEquals(row.get("service"), SERVICE, "Поле 'service' в %s".formatted(TRANSACTION_TABLE));
         softAssertNull(row.get("sent_to_dp"), "Поле 'sent_to_dp' в %s должно быть NULL".formatted(TRANSACTION_TABLE));
         softAssertAll();
 
@@ -233,7 +233,7 @@ public class BatmDpStreamingTests extends BaseAPIState {
 
         // шаг 2
         Map<String, Object> row = last(history);
-        softAssertValue(row, "sent_to_dp", true, INSTRUCTION_TABLE);
+        softAssertEquals(row.get("sent_to_dp"), true, "Поле 'sent_to_dp' в %s".formatted(INSTRUCTION_TABLE));
         softAssertNotNull(row.get("execution_dt"), "Поле 'execution_dt' в %s должно быть заполнено".formatted(INSTRUCTION_TABLE));
         softAssertUpdated(history, DB_EXECUTED, INSTRUCTION_TABLE);
 
@@ -264,7 +264,7 @@ public class BatmDpStreamingTests extends BaseAPIState {
 
         // шаг 2
         Map<String, Object> row = last(history);
-        softAssertValue(row, "sent_to_dp", true, TRANSACTION_TABLE);
+        softAssertEquals(row.get("sent_to_dp"), true, "Поле 'sent_to_dp' в %s".formatted(TRANSACTION_TABLE));
         softAssertUpdated(history, DB_EXECUTED, TRANSACTION_TABLE);
 
         // шаги 3, 4
@@ -412,15 +412,6 @@ public class BatmDpStreamingTests extends BaseAPIState {
                     "Поле '%s' в %s не обновилось при переходе %s -> %s (значение: %s)".formatted(
                             column, table, previous.get("status"), expectedStatus, current.get(column)));
         }
-    }
-
-    /**
-     * Сравнение значения колонки без NPE при NULL в БД
-     */
-    private void softAssertValue(Map<String, Object> row, String column, Object expected, String table) {
-        Object actual = row.get(column);
-        softAssertTrue(Objects.equals(actual, expected),
-                "Поле '%s' в %s: ожидалось '%s', фактически '%s'".formatted(column, table, expected, actual));
     }
 
     /**

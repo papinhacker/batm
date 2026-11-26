@@ -94,12 +94,14 @@ public class KafkaHelper {
     }
 
     private static String getRecord(KafkaTopic topic, Predicate<String> condition, long timeout, SearchStrategy searchStrategy) {
+        failIfReadingBroken(topic);
         if (!KafkaClient.isReadingStarted(topic.getCluster())) {
             Assert.fail("Топик '%s' не читается: не запущено чтение Kafka-кластера '%s' (проверьте свойство '%s')".formatted(
                     topic.getTopicName(), topic.getCluster(), topic.getCluster().getBootstrapServersPropertyKey()));
         }
         Map<Long, String> current = topic.getTopicMap();
-        waitForMessage(current, condition, timeout);
+        waitForMessage(topic, current, condition, timeout);
+        failIfReadingBroken(topic);
         var stream = current.entrySet().stream().filter(e -> condition.test(e.getValue()));
         Optional<Map.Entry<Long, String>> entry;
         switch (searchStrategy) {
@@ -116,13 +118,26 @@ public class KafkaHelper {
         return null;
     }
 
-    private static void waitForMessage(Map<Long, String> map, Predicate<String> condition, long timeout) {
+    /**
+     * Роняет тест, если чтение топиков кластера, к которому относится топик, остановилось с ошибкой.
+     */
+    private static void failIfReadingBroken(KafkaTopic topic) {
+        Throwable error = KafkaClient.getReadingError(topic.getCluster());
+        if (error != null) {
+            Assert.fail("Топик '%s' не читается: чтение Kafka-кластера '%s' остановлено из-за ошибки: %s"
+                    .formatted(topic.getTopicName(), topic.getCluster(), error), error);
+        }
+    }
+
+    private static void waitForMessage(KafkaTopic topic, Map<Long, String> map, Predicate<String> condition, long timeout) {
         try {
+            // ожидание прерывается и при падении чтения кластера — тест не ждёт весь таймаут впустую
             Awaitility.await()
                     .pollInSameThread()
                     .timeout(Duration.ofSeconds(timeout))
                     .pollInterval(1, TimeUnit.SECONDS)
-                    .until(() -> map.values().stream().anyMatch(condition));
+                    .until(() -> KafkaClient.getReadingError(topic.getCluster()) != null
+                            || map.values().stream().anyMatch(condition));
         } catch (ConditionTimeoutException ignored) {
 
         }

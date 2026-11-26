@@ -16,6 +16,8 @@ import ru.vtb.core.common.Log;
 import ru.vtb.core.data.static_data.KafkaCluster;
 import ru.vtb.core.data.static_data.KafkaTopic;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +31,7 @@ import java.util.concurrent.Executors;
 public class KafkaClient {
 
     private static final Set<KafkaCluster> readingClusters = ConcurrentHashMap.newKeySet();
+    private static final Map<KafkaCluster, Throwable> readingErrors = new ConcurrentHashMap<>();
     private final Properties clientConfig;
 
     public KafkaClient() {
@@ -75,9 +78,14 @@ public class KafkaClient {
                             KafkaTopic.getTopicStorageByName(cluster, rec.topic()).put(rec.offset(), rec.value());
                         }
                     }
-                } catch (Exception e) {
-                    Log.error("While reading kafka topics unpredictable error was occurred. Reason is: " + e.getMessage());
-                    System.exit(-1);
+                } catch (Throwable e) {
+                    // Прогон не обрывается: ошибка сохраняется по кластеру, и KafkaHelper роняет с ней тесты,
+                    // которые читают топики этого кластера. Тесты других кластеров продолжают работать.
+                    readingErrors.put(cluster, e);
+                    StringWriter stackTrace = new StringWriter();
+                    e.printStackTrace(new PrintWriter(stackTrace));
+                    Log.error("Чтение топиков Kafka-кластера '%s' остановлено из-за ошибки: %s%n%s"
+                            .formatted(cluster, e, stackTrace));
                 }
             });
         } else {
@@ -90,6 +98,13 @@ public class KafkaClient {
      */
     public static boolean isReadingStarted(KafkaCluster cluster) {
         return readingClusters.contains(cluster);
+    }
+
+    /**
+     * @return исключение, из-за которого остановилось чтение топиков кластера, или null, если чтение не падало
+     */
+    public static Throwable getReadingError(KafkaCluster cluster) {
+        return readingErrors.get(cluster);
     }
 
     public KafkaClient addConfig(Map<Object, Object> configMap) {
