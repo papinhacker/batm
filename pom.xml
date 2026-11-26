@@ -32,6 +32,7 @@
         <json-schema-validator.version>1.5.6</json-schema-validator.version>
         <opencsv.version>5.12.0</opencsv.version>
         <simple-java-mail.version>8.6.2</simple-java-mail.version>
+        <testcontainers.version>2.0.5</testcontainers.version>
     </properties>
 
     <dependencies>
@@ -193,9 +194,63 @@
                 <configuration>
                     <source>16</source>
                     <target>16</target>
+                    <!-- Офлайн-тесты фреймворка компилируются только в профиле selftest:
+                         обычная сборка и fat-jar остаются прежними -->
+                    <testExcludes>
+                        <testExclude>ru/vtb/selftest/**</testExclude>
+                    </testExcludes>
                 </configuration>
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Офлайн-тесты фреймворка: mvn -q test -Pselftest
+             Запускаются только тесты из ru.vtb.selftest, без TestNGListener и без обращений к стенду.
+             Тесты, которым нужен Docker, пропускаются (SkipException), если Docker недоступен.
+             Префикс реестра образов: -Dselftest.registry=registry.example.com (по умолчанию Docker Hub). -->
+        <profile>
+            <id>selftest</id>
+            <properties>
+                <selftest.registry/>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>org.testcontainers</groupId>
+                    <artifactId>testcontainers</artifactId>
+                    <version>${testcontainers.version}</version>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-compiler-plugin</artifactId>
+                        <configuration>
+                            <testExcludes combine.self="override"/>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <version>3.2.5</version>
+                        <configuration>
+                            <includes>
+                                <include>ru/vtb/selftest/**/*Test.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <cenv>test</cenv>
+                                <selftest.registry>${selftest.registry}</selftest.registry>
+                            </systemPropertyVariables>
+                            <environmentVariables>
+                                <TESTCONTAINERS_IMAGE_SUBSTITUTOR>ru.vtb.selftest.support.RegistryImageNameSubstitutor</TESTCONTAINERS_IMAGE_SUBSTITUTOR>
+                            </environmentVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
