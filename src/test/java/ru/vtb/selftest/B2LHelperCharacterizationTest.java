@@ -52,9 +52,9 @@ public class B2LHelperCharacterizationTest {
             assertNotEquals(prefix, "06", "Префикс 06 не генерируется: " + name);
             assertNotEquals(prefix, "26", "Префикс 26 не генерируется: " + name);
             int day = Integer.parseInt(m.group(2));
-            // День года всегда строго раньше сегодняшнего и в пределах текущего года.
-            assertTrue(day >= 1 && day < todayDayOfYear,
-                    "День года %d должен быть в [1, %d): %s".formatted(day, todayDayOfYear, name));
+            // День года — в пределах текущего года, сегодняшний день включительно.
+            assertTrue(day >= 1 && day <= todayDayOfYear,
+                    "День года %d должен быть в [1, %d]: %s".formatted(day, todayDayOfYear, name));
             prefixes.add(prefix);
         }
         // Обе группы префиксов реально выпадают (выбор группы 50/50, внутри группы равномерно).
@@ -64,23 +64,37 @@ public class B2LHelperCharacterizationTest {
                 "За %d итераций должны выпасть все 10 префиксов".formatted(ITERATIONS));
     }
 
-    @Test(groups = {"selftest"}, description = "2 января единственный возможный день — 001")
-    public void secondOfJanuaryAlwaysGivesDay001() {
+    @Test(groups = {"selftest"}, description = "2 января возможны дни 001 и 002, оба выпадают")
+    public void secondOfJanuaryGivesDay001Or002() {
         DateTimeUtils.setCurrentMillisFixed(new DateTime(2027, 1, 2, 12, 0).getMillis());
+        Set<String> days = new HashSet<>();
+        for (int i = 0; i < 200; i++) {
+            String name = B2LHelper.generateBase2LikeFileName(B2LMask.D_038cto);
+            days.add(name.substring(name.length() - 3));
+        }
+        assertEquals(days, Set.of("001", "002"));
+    }
+
+    // Регрессия: раньше 1 января падало IllegalArgumentException (nextInt(1, 1)).
+    @Test(groups = {"selftest"}, description = "1 января день всегда 001")
+    public void firstOfJanuaryGivesDay001() {
+        DateTimeUtils.setCurrentMillisFixed(new DateTime(2027, 1, 1, 12, 0).getMillis());
         for (int i = 0; i < 100; i++) {
             assertTrue(B2LHelper.generateBase2LikeFileName(B2LMask.D_038cto).endsWith(".001"));
         }
     }
 
-    // KNOWN-BUG: 1 января CommonHelper.getNumericDayOfYearBeforeCurrentDate вызывает
-    // ThreadLocalRandom.nextInt(1, dayOfYear) = nextInt(1, 1) -> IllegalArgumentException,
-    // т.е. генерация имени файла без postfix падает весь день 1 января.
-    @Test(groups = {"selftest"}, description = "1 января генерация имени без postfix падает (KNOWN-BUG)")
-    public void firstOfJanuaryThrows() {
-        DateTimeUtils.setCurrentMillisFixed(new DateTime(2027, 1, 1, 12, 0).getMillis());
-        IllegalArgumentException e = expectThrows(IllegalArgumentException.class,
-                () -> B2LHelper.generateBase2LikeFileName(B2LMask.D_038cto));
-        assertEquals(e.getMessage(), "bound must be greater than origin");
+    @Test(groups = {"selftest"}, description = "31 декабря високосного года возможен день 366")
+    public void lastDayOfLeapYearReaches366() {
+        DateTimeUtils.setCurrentMillisFixed(new DateTime(2028, 12, 31, 12, 0).getMillis());
+        boolean seen366 = false;
+        for (int i = 0; i < 5000 && !seen366; i++) {
+            String name = B2LHelper.generateBase2LikeFileName(B2LMask.D_038cto);
+            String day = name.substring(name.length() - 3);
+            assertTrue(Integer.parseInt(day) >= 1 && Integer.parseInt(day) <= 366, day);
+            seen366 = day.equals("366");
+        }
+        assertTrue(seen366, "За 5000 итераций должен выпасть день 366");
     }
 
     @Test(groups = {"selftest"}, description = "С postfix к маске дописывается ровно postfix, без '.ДДД'")

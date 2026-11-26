@@ -19,8 +19,25 @@ public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMe
     protected static int threadCount;
 
     static {
-        String count = System.getProperty("threadCount");
-        threadCount = count.matches("\\d+") ? Integer.parseInt(count) : 1;
+        threadCount = parseThreadCount(System.getProperty("threadCount"));
+    }
+
+    /**
+     * @param value значение свойства -DthreadCount
+     * @return число потоков; 1, если свойство не задано, или (с предупреждением в лог) если значение не число
+     */
+    public static int parseThreadCount(String value) {
+        if (value == null || value.isBlank()) {
+            return 1;
+        }
+        String trimmed = value.trim();
+        // не больше 9 цифр — Integer.parseInt не переполнится
+        if (trimmed.matches("\\d{1,9}")) {
+            return Integer.parseInt(trimmed);
+        }
+        Log.warning("Некорректное значение -DthreadCount='%s': ожидается целое число, тесты будут запущены в 1 поток"
+                .formatted(value));
+        return 1;
     }
 
     @Override

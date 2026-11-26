@@ -50,14 +50,14 @@ public class SoftAssertVerification {
 
     public void softAssertEquals(Object actual, Object expected, String message) {
         this.softAssert.assertEquals(actual, expected, message);
-        if (!actual.equals(expected)) {
+        if (!Objects.equals(actual, expected)) {
             Log.assertFail("%s.%nDifference:%nActual   : '%s'%nExpected : '%s'".formatted(message, actual, expected));
         }
     }
 
     public void softAssertNotEquals(Object actual, Object expected, String message) {
         this.softAssert.assertNotEquals(actual, expected, message);
-        if (actual.equals(expected)) {
+        if (Objects.equals(actual, expected)) {
             Log.assertFail("%s.%nObjects must be not equals:%nActual   : '%s'%nExpected : '%s'".formatted(message, actual, expected));
         }
     }

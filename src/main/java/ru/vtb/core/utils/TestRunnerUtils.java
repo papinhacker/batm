@@ -24,10 +24,15 @@ public class TestRunnerUtils {
             + "test" + FILE_SEPARATOR
             + "resources";
 
+    private static final String MAIN_RESOURCES_ENTRY_PREFIX = "main_resources/";
+
     public static void unpackResources() {
         File main = new File(MAIN_RESOURCES_FOLDER);
         File test = new File(TEST_RESOURCES_FOLDER);
-        if (!main.mkdirs() || !test.mkdirs())
+        // Распаковываем только если main-ресурсов рядом с jar ещё нет (на CI они лежат рядом с jar).
+        boolean mainExists = main.exists();
+        test.mkdirs();
+        if (mainExists)
             return;
 
         String jarPath;
@@ -40,21 +45,35 @@ public class TestRunnerUtils {
         if (!jarPath.endsWith(".jar"))
             return;
 
-        try (JarFile jar = new JarFile(jarPath)) {
+        unpackMainResources(Path.of(jarPath), main.toPath());
+    }
+
+    /**
+     * Распаковывает записи {@code main_resources/**} из jar в каталог destDir с сохранением структуры каталогов.
+     */
+    public static void unpackMainResources(Path jarPath, Path destDir) {
+        try (JarFile jar = new JarFile(jarPath.toFile())) {
+            Files.createDirectories(destDir);
             Enumeration<JarEntry> entries = jar.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
                 String name = entry.getName();
 
-                if (name.startsWith("main_resources")) {
-                    String relative = name.substring("main_resources".length()+1);
-                    Path destDir = main.toPath();
+                if (name.startsWith(MAIN_RESOURCES_ENTRY_PREFIX)) {
+                    String relative = name.substring(MAIN_RESOURCES_ENTRY_PREFIX.length());
+                    if (relative.isEmpty())
+                        continue;
                     Path outPath = destDir.resolve(relative);
-                    Files.createDirectories(outPath);
+                    if (entry.isDirectory()) {
+                        Files.createDirectories(outPath);
+                        continue;
+                    }
+                    Files.createDirectories(outPath.getParent());
                     try (InputStream is = jar.getInputStream(entry)) {
                         Files.copy(is, outPath, StandardCopyOption.REPLACE_EXISTING);
                     } catch (IOException e) {
-                        throw new RuntimeException("Unable to unpack resource '%s' to path '%s'. Reason is: %s");
+                        throw new RuntimeException("Unable to unpack resource '%s' to path '%s'. Reason is: %s"
+                                .formatted(name, outPath, e.getMessage()), e);
                     }
 
 //                    unpackSingleResource(jar, entry, new File(PROJECT_DIRECTORY + FILE_SEPARATOR + "main"));
@@ -70,7 +89,8 @@ public class TestRunnerUtils {
 //                }
             }
         } catch (IOException e) {
-            throw new RuntimeException("Unable to unpack resources from JAR file. Reason is: " + e.getMessage());
+            throw new RuntimeException("Unable to unpack resources from JAR file '%s'. Reason is: %s"
+                    .formatted(jarPath, e.getMessage()), e);
         }
     }
 
