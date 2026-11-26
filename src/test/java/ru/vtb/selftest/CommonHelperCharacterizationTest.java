@@ -159,8 +159,7 @@ public class CommonHelperCharacterizationTest {
                 () -> CommonHelper.parseDateFromPatternToAnotherPattern("yyyy-MM-dd", "yyyyMMdd", "26.11.2026"));
         assertEquals(e.getMessage(),
                 "Unable to parse date '26.11.2026' from pattern 'yyyy-MM-dd' to pattern 'yyyyMMdd'");
-        // KNOWN-BUG: исходный ParseException не передаётся как cause.
-        assertNull(e.getCause());
+        assertTrue(e.getCause() instanceof java.text.ParseException, "cause: " + e.getCause());
     }
 
     // KNOWN-BUG: SimpleDateFormat нестрогий (lenient) — несуществующие даты молча переносятся.
@@ -169,6 +168,13 @@ public class CommonHelperCharacterizationTest {
         assertEquals(CommonHelper.parseDateFromPatternToAnotherPattern("yyyyMMdd", "yyyy-MM-dd", "20241332"), "2025-02-01");
         assertEquals(CommonHelper.parseDateFromPatternToAnotherPattern("yyyy-MM-dd", "yyyy-MM-dd", "2026-02-30"), "2026-03-02");
         assertEquals(CommonHelper.parseDateFromPatternToAnotherPattern("HHmmss", "HH:mm:ss", "256161"), "02:02:01");
+        // KNOWN-BUG: микросекунды Postgres-timestamp (Timestamp.toString) по шаблону ".SSS" читаются как миллисекунды:
+        // 123456 мс = +2 мин 3 с, поэтому около полуночи дата сдвигается на следующий день
+        // (так разбираются даты в BatmBinTests:31 и BatmClearingSingleThreadTests:34).
+        assertEquals(CommonHelper.parseDateFromPatternToAnotherPattern("yyyy-MM-dd HH:mm:ss.SSS", "yyyy-MM-dd HH:mm:ss",
+                "2026-11-26 23:59:59.123456"), "2026-11-27 00:02:02");
+        // ".12" — это 12 мс, а не 120.
+        assertEquals(CommonHelper.parseDateFromPatternToAnotherPattern("ss.SSS", "ss.SSS", "59.12"), "59.012");
     }
 
     // KNOWN-BUG: хвост строки после разобранной даты игнорируется (SimpleDateFormat.parse не требует разбора всей строки).

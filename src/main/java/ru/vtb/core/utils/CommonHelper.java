@@ -39,7 +39,7 @@ public class CommonHelper {
             return new SimpleDateFormat(newPattern).format(new SimpleDateFormat(originalPattern).parse(date));
         } catch (ParseException e) {
             throw new RuntimeException("Unable to parse date '%s' from pattern '%s' to pattern '%s'"
-                    .formatted(date, originalPattern, newPattern));
+                    .formatted(date, originalPattern, newPattern), e);
         }
     }
 
