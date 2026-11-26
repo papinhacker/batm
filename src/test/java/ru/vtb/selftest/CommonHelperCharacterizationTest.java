@@ -132,14 +132,13 @@ public class CommonHelperCharacterizationTest {
                 + TransactionsItem.class.getName() + "'. Reason is: Unrecognized field \"unknown\""), e.getMessage());
     }
 
-    // KNOWN-BUG: причина (IOException) не передаётся в RuntimeException как cause — остаётся только её текст.
-    @Test(groups = {"selftest"}, description = "Битый JSON -> RuntimeException с текстом причины, без cause (KNOWN-BUG)")
-    public void deserializeBrokenJsonThrowsWithoutCause() {
+    @Test(groups = {"selftest"}, description = "Битый JSON -> RuntimeException с текстом и исходным исключением в cause")
+    public void deserializeBrokenJsonThrowsWithCause() {
         RuntimeException e = expectThrows(RuntimeException.class,
                 () -> CommonHelper.deserializeJsonToObject("{not json", TransactionsItem.class));
         assertTrue(e.getMessage().startsWith("Unable to deserialize json to object '"
                 + TransactionsItem.class.getName() + "'. Reason is: "), e.getMessage());
-        assertNull(e.getCause());
+        assertTrue(e.getCause() instanceof java.io.IOException, "cause: " + e.getCause());
     }
 
     // ---------- parseDateFromPatternToAnotherPattern ----------

@@ -82,7 +82,7 @@ public class CommonHelper {
             return new ObjectMapper().readValue(json, clazz);
         } catch (IOException e) {
             Log.error("Bad json:%n%s".formatted(json));
-            throw new RuntimeException("Unable to deserialize json to object '%s'. Reason is: %s".formatted(clazz.getName(), e.getMessage()));
+            throw new RuntimeException("Unable to deserialize json to object '%s'. Reason is: %s".formatted(clazz.getName(), e.getMessage()), e);
         }
     }
 
@@ -91,7 +91,7 @@ public class CommonHelper {
             return new ObjectMapper().readValue(json, clazz);
         } catch (IOException e) {
             Log.error("Bad json:%n%s".formatted(json));
-            throw new RuntimeException("Unable to deserialize json to object '%s'. Reason is: %s".formatted(clazz.getName(), e.getMessage()));
+            throw new RuntimeException("Unable to deserialize json to object '%s'. Reason is: %s".formatted(clazz.getName(), e.getMessage()), e);
         }
     }
 
@@ -106,10 +106,14 @@ public class CommonHelper {
         }
     }
 
+    /**
+     * @return случайный день текущего года в формате "%03d" из диапазона [001, сегодня] включительно
+     * (1 января — всегда "001")
+     */
     public static String getNumericDayOfYearBeforeCurrentDate() {
         DateTime dateTime = new DateTime();
         return String.format("%03d",
-                Integer.parseInt(dateTime.minusDays(ThreadLocalRandom.current().nextInt(1, dateTime.getDayOfYear()))
+                Integer.parseInt(dateTime.minusDays(ThreadLocalRandom.current().nextInt(0, dateTime.getDayOfYear()))
                         .dayOfYear().getAsString()));
     }
 
