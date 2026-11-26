@@ -1,7 +1,6 @@
 package ru.vtb.core.common;
 
 import org.apache.commons.lang3.StringUtils;
-import org.testng.annotations.Test;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -41,7 +40,6 @@ public class EnvConstants {
 
     /* base urls data */
     public static final String BASE_URI = getProperty("base.page.uri");
-    public static final String LOGIN_PAGE = BASE_URI + "/solar-air-acq/login";
     public static final String BO_JSON_API_ENDPOINT = "/bo-json-api";
 
     /* database data */
@@ -77,26 +75,10 @@ public class EnvConstants {
     public static final String UASP_BOOTSTRAP_SERVERS = getProperty("kafka.uasp.bootstrap.servers");
     public static final String ODS_BOOTSTRAP_SERVERS = getProperty("kafka.ods.bootstrap.servers");
 
-    /* clearing decoding */
-    public static final String CLEARING_SIGNATURE_FILE = MAIN_RESOURCES_FOLDER + FILE_SEPARATOR + "clearing" + FILE_SEPARATOR + getProperty("clearing.decoding.signature.filename");
-    public static final String CLEARING_SSL_KEYSTORE_TYPE = getProperty("clearing.ssl.keystore.type");
-    public static final String CLEARING_SSL_KEYSTORE_LOCATION = CERTIFICATION_LOCATION.formatted("-batm-keystore.pfx");
-
-    /* ui options */
-    public static final String CHROME_VERSION = getProperty("chrome.version");
-    public static final String CHROME_DRIVER_VERSION = getProperty("chrome.driver.version");
-    public static final String SELENOID_URL = getEncryptedProperty("selenoid.url");
-
-    /* user data */
-    public static final String BASIC_USER_LOGIN = getProperty("user.admin.login");
-    public static final String DEFAULT_PASSWORD = getEncryptedProperty("user.default.password");
-
     /* smtp data */
     public static final String SMTP_LOGIN = getProperty("smtp.login");
     public static final String SMTP_PASSWORD = getEncryptedProperty("smtp.password");
     public static final String SMTP_HOST = getProperty("smtp.host");
-
-    private static final String ERROR_MESSAGE = "'-Dcenv=' property key must be provided";
 
     private static String getEnvironment() {
         String cEnv = System.getProperty("cenv");
@@ -133,35 +115,6 @@ public class EnvConstants {
             return value;
         }
         return new EncryptionSettings(ENCRYPTION_KEY).decryptString(value);
-    }
-
-    /**
-     * Зашифровывает строку в переменной value
-     * Результат выводится в консоль
-     */
-    @Test
-    protected static void encryptString() {
-        String value = "don't forget to delete me";
-        if (StringUtils.isEmpty(ENCRYPTION_KEY)) {
-            throw new RuntimeException(ERROR_MESSAGE);
-        }
-        Log.info("String to encrypt: " + value);
-        String encryptedString = new EncryptionSettings(ENCRYPTION_KEY).encryptString(value);
-        Log.info("Encrypted string: " + encryptedString);
-    }
-
-    /**
-     * Дешифрует строку в переменной value
-     * Результат выводится в консоль
-     */
-    @Test
-    protected static void decryptString() {
-        String value = "delete me after decrypting";
-        if (StringUtils.isEmpty(ENCRYPTION_KEY)) {
-            throw new RuntimeException(ERROR_MESSAGE);
-        }
-        Log.info("Decrypted string: " +
-                new EncryptionSettings(ENCRYPTION_KEY).decryptString(value));
     }
 
 }
