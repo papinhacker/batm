@@ -6,13 +6,10 @@ import org.testng.annotations.ITestAnnotation;
 import org.testng.xml.XmlSuite;
 import ru.vtb.core.common.Log;
 import ru.vtb.core.common.RetryAnalyzer;
-import ru.vtb.core.data.static_data.KafkaCluster;
-import ru.vtb.core.data.static_data.KafkaTopic;
-import ru.vtb.core.utils.KafkaClient;
+import ru.vtb.core.utils.kafka.KafkaRuntimeRegistry;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
-import java.util.List;
 
 public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMethodListener, IReporter, IAnnotationTransformer {
 
@@ -54,7 +51,13 @@ public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMe
             xmlSuite.setPreserveOrder(true);
         }
         Log.info("Тесты будут запущенны в '%s' поток(а/ов)".formatted(String.valueOf(xmlSuite.getThreadCount())));
-        initKafkaConsumers();
+        // Чтение Kafka с конца топиков; ошибка старта любого настроенного кластера роняет весь прогон
+        KafkaRuntimeRegistry.start();
+    }
+
+    @Override
+    public void onFinish(ISuite suite) {
+        KafkaRuntimeRegistry.stop();
     }
 
     @Override
@@ -68,20 +71,5 @@ public class TestNGListener implements ITestListener, ISuiteListener, IInvokedMe
     @Override
     public void transform(ITestAnnotation annotation, Class testClass, Constructor testConstructor, Method testMethod) {
         annotation.setRetryAnalyzer(RetryAnalyzer.class);
-    }
-
-    private void initKafkaConsumers() {
-        for (KafkaCluster cluster : KafkaCluster.values()) {
-            List<String> topics = KafkaTopic.getTopicsNames(cluster);
-            if (topics.isEmpty()) {
-                continue;
-            }
-            if (cluster.isConfigured()) {
-                KafkaClient.startReadingTopics(cluster, topics);
-            } else {
-                Log.warning("Kafka-кластер '%s' не настроен (пустое свойство '%s'), топики %s читаться не будут"
-                        .formatted(cluster, cluster.getBootstrapServersPropertyKey(), topics));
-            }
-        }
     }
 }

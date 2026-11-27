@@ -62,18 +62,7 @@ public class EnvConstants {
     public static final String S3_REGION = getProperty("s3.region");
     public static final String S3_PROTOCOL = getProperty("s3.protocol");
 
-    /* kafka options */
-    private static final String CERTIFICATION_LOCATION = MAIN_RESOURCES_FOLDER + FILE_SEPARATOR + "kafka" + FILE_SEPARATOR + ENV + "%s";
-    public static final String BOOTSTRAP_SERVERS = getProperty("bootstrap.servers");
-    public static final String SSL_TRUSTSTORE_TYPE = getProperty("ssl.truststore.type");
-    public static final String SSL_TRUSTSTORE_LOCATION = CERTIFICATION_LOCATION.formatted("-batm-truststore.p12");
-    public static final String SSL_TRUSTSTORE_PASSWORD = getEncryptedProperty("ssl.truststore.password");
-    public static final String SSL_KEYSTORE_TYPE = getProperty("ssl.keystore.type");
-    public static final String SSL_KEYSTORE_LOCATION = CERTIFICATION_LOCATION.formatted("-batm-keystore.p12");
-    public static final String SSL_KEYSTORE_PASSWORD = getEncryptedProperty("ssl.keystore.password");
-    /* дополнительные кластеры kafka (SSL-настройки общие с основной кафкой) */
-    public static final String UASP_BOOTSTRAP_SERVERS = getProperty("kafka.uasp.bootstrap.servers");
-    public static final String ODS_BOOTSTRAP_SERVERS = getProperty("kafka.ods.bootstrap.servers");
+    /* kafka options: настройки кластеров читает ru.vtb.core.utils.kafka.KafkaClusterConfig (ключи kafka.<имя>.*) */
 
     /* smtp data */
     public static final String SMTP_LOGIN = getProperty("smtp.login");
@@ -105,13 +94,26 @@ public class EnvConstants {
         return properties;
     }
 
-    protected static String getProperty(String key) {
+    /**
+     * @return имя окружения из -Dcenv (в нижнем регистре)
+     */
+    public static String getEnvironmentName() {
+        return ENV;
+    }
+
+    public static String getProperty(String key) {
         return PROPERTIES.getProperty(key);
     }
 
-    protected static String getEncryptedProperty(String key) {
-        String value = getProperty(key);
-        if (StringUtils.isEmpty(ENCRYPTION_KEY)) {
+    public static String getEncryptedProperty(String key) {
+        return decrypt(getProperty(key));
+    }
+
+    /**
+     * Расшифровывает значение ключом -Dekey; без ключа или для null возвращает значение как есть.
+     */
+    public static String decrypt(String value) {
+        if (value == null || StringUtils.isEmpty(ENCRYPTION_KEY)) {
             return value;
         }
         return new EncryptionSettings(ENCRYPTION_KEY).decryptString(value);

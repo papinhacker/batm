@@ -1,7 +1,5 @@
 package ru.vtb.core.utils;
 
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.awaitility.Awaitility;
@@ -9,21 +7,20 @@ import org.awaitility.core.ConditionTimeoutException;
 import org.testng.Assert;
 import ru.vtb.core.common.Log;
 import ru.vtb.core.data.static_data.KafkaTopic;
+import ru.vtb.core.utils.kafka.KafkaClusterRuntime;
+import ru.vtb.core.utils.kafka.KafkaMessage;
+import ru.vtb.core.utils.kafka.KafkaRuntimeRegistry;
+import ru.vtb.core.utils.kafka.TopicStore;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 public class KafkaHelper {
-
-    protected static final KafkaClient BATM_KAFKA = new KafkaClient().addConfig(Map.of(ConsumerConfig.GROUP_ID_CONFIG,
-            "Test Automation Consumer - " + RandomStringUtils.insecure().nextAlphabetic(10)));
 
     private KafkaHelper() {
     }
@@ -93,53 +90,64 @@ public class KafkaHelper {
         }
     }
 
+    /**
+     * Старое поведение поверх нового хранилища (временно, до перехода на await*): сообщение, уже возвращённое
+     * одним из старых методов, им повторно не возвращается — оно отмечается, а не удаляется
+     * (новые методы поиска видят все сообщения). FIRST/LAST — по timestamp сообщения.
+     */
     private static String getRecord(KafkaTopic topic, Predicate<String> condition, long timeout, SearchStrategy searchStrategy) {
+        TopicStore store = storeOf(topic);
+        Predicate<KafkaMessage> byValue = message -> message.value() != null && condition.test(message.value());
+        waitForMessage(topic, store, byValue, timeout);
         failIfReadingBroken(topic);
-        if (!KafkaClient.isReadingStarted(topic.getCluster())) {
+        TopicStore.Order order = switch (searchStrategy) {
+            case LAST -> TopicStore.Order.LAST;
+            case FIRST -> TopicStore.Order.FIRST;
+            case NONE -> TopicStore.Order.ANY;
+        };
+        return store.takeUnmarked(byValue, order).map(KafkaMessage::value).orElse(null);
+    }
+
+    /**
+     * @return хранилище топика; тест падает, если чтение кластера не запущено или остановилось с ошибкой
+     */
+    private static TopicStore storeOf(KafkaTopic topic) {
+        failIfReadingBroken(topic);
+        KafkaClusterRuntime runtime = KafkaRuntimeRegistry.runtime(topic.getCluster());
+        TopicStore store = runtime == null ? null : runtime.store(topic.getTopicName());
+        if (store == null) {
             Assert.fail("Топик '%s' не читается: не запущено чтение Kafka-кластера '%s' (проверьте свойство '%s')".formatted(
                     topic.getTopicName(), topic.getCluster(), topic.getCluster().getBootstrapServersPropertyKey()));
         }
-        Map<Long, String> current = topic.getTopicMap();
-        waitForMessage(topic, current, condition, timeout);
-        failIfReadingBroken(topic);
-        var stream = current.entrySet().stream().filter(e -> condition.test(e.getValue()));
-        Optional<Map.Entry<Long, String>> entry;
-        switch (searchStrategy) {
-            case LAST -> entry = stream.max(Map.Entry.comparingByKey());
-            case FIRST -> entry = stream.min(Map.Entry.comparingByKey());
-            case NONE -> entry = stream.findAny();
-            default -> throw new IllegalStateException("Unexpected value: " + searchStrategy);
-        }
-        if (entry.isPresent()) {
-            var buff = entry.get();
-            current.remove(buff.getKey(), buff.getValue());
-            return buff.getValue();
-        }
-        return null;
+        return store;
     }
 
     /**
      * Роняет тест, если чтение топиков кластера, к которому относится топик, остановилось с ошибкой.
      */
     private static void failIfReadingBroken(KafkaTopic topic) {
-        Throwable error = KafkaClient.getReadingError(topic.getCluster());
+        Throwable error = readingError(topic);
         if (error != null) {
             Assert.fail("Топик '%s' не читается: чтение Kafka-кластера '%s' остановлено из-за ошибки: %s"
                     .formatted(topic.getTopicName(), topic.getCluster(), error), error);
         }
     }
 
-    private static void waitForMessage(KafkaTopic topic, Map<Long, String> map, Predicate<String> condition, long timeout) {
+    private static Throwable readingError(KafkaTopic topic) {
+        KafkaClusterRuntime runtime = KafkaRuntimeRegistry.runtime(topic.getCluster());
+        return runtime == null ? null : runtime.getError();
+    }
+
+    private static void waitForMessage(KafkaTopic topic, TopicStore store, Predicate<KafkaMessage> condition, long timeout) {
         try {
             // ожидание прерывается и при падении чтения кластера — тест не ждёт весь таймаут впустую
             Awaitility.await()
                     .pollInSameThread()
                     .timeout(Duration.ofSeconds(timeout))
                     .pollInterval(1, TimeUnit.SECONDS)
-                    .until(() -> KafkaClient.getReadingError(topic.getCluster()) != null
-                            || map.values().stream().anyMatch(condition));
+                    .until(() -> readingError(topic) != null || store.anyMatch(condition, true));
         } catch (ConditionTimeoutException ignored) {
-
+            // не найдено за таймаут: вызывающий метод решает, падать (Assert.fail) или вернуть null (needFail)
         }
     }
 
@@ -158,10 +166,14 @@ public class KafkaHelper {
         }
         Log.step("Отправляем сообщение '%s' в топик '%s'".formatted(message, topic.getTopicName()));
         Future<RecordMetadata> future = null;
-        try (var producer = BATM_KAFKA.createProducer()) {
-            future = producer.send(new ProducerRecord<>(topic.getTopicName(), message));
+        try {
+            // один producer на кластер топика (раньше — новый producer кластера BATM на каждое сообщение)
+            future = KafkaRuntimeRegistry.producer(topic.getCluster()).send(new ProducerRecord<>(topic.getTopicName(), message));
             future.get();
-        } catch (ExecutionException | InterruptedException e) {
+        } catch (ExecutionException e) {
+            Assert.fail(String.format("Не удалось отправить сообщение в топик '%s'", topic.getTopicName()), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             Assert.fail(String.format("Не удалось отправить сообщение в топик '%s'", topic.getTopicName()), e);
         }
         return future;
