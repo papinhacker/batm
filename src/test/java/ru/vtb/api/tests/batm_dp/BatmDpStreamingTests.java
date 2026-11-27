@@ -1,5 +1,6 @@
 package ru.vtb.api.tests.batm_dp;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.qameta.allure.TmsLink;
@@ -18,6 +19,7 @@ import ru.vtb.core.utils.B2LHelper;
 import ru.vtb.core.utils.CommonHelper;
 import ru.vtb.core.utils.DBHelper;
 import ru.vtb.core.utils.KafkaHelper;
+import ru.vtb.core.utils.kafka.Described;
 
 import java.io.File;
 import java.time.Duration;
@@ -37,6 +39,8 @@ import static ru.vtb.core.data.static_data.KafkaTopic.*;
 import static ru.vtb.core.data.static_data.MapsKeysConstants.TERMINAL_ID;
 import static ru.vtb.core.data.static_data.S3Constants.BATM_OUTPUT;
 import static ru.vtb.core.data.static_data.S3Constants.IF_BATM_WAY_IN;
+import static ru.vtb.core.utils.kafka.JsonPredicates.fields;
+import static ru.vtb.core.utils.kafka.JsonPredicates.jsonFieldsEqual;
 
 /**
  * BATM-DP Стримминг в платформу данных / Операции клиринга.
@@ -304,19 +308,31 @@ public class BatmDpStreamingTests extends BaseAPIState {
      ********************************/
 
     private BatmTransOutBatmDpInstRootMessage awaitInstructionNew(String rrn) {
-        return (BatmTransOutBatmDpInstRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_INST, List.of(rrn, NEW), long_timeout * 3);
+        return KafkaHelper.await(BATM_TRANS_OUT_BATM_DP_INST, BatmTransOutBatmDpInstRootMessage.class,
+                Described.of("rrn=%s, status=%s".formatted(rrn, NEW),
+                        m -> rrn.equals(m.getRrn()) && NEW.equals(m.getStatus())),
+                Duration.ofSeconds(long_timeout * 3));
     }
 
     private BatmTransOutBatmDpInstRootMessage awaitInstructionEvent(String instructionId, String status, long timeoutInSecs) {
-        return (BatmTransOutBatmDpInstRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_INST, List.of(instructionId, status), timeoutInSecs);
+        return KafkaHelper.await(BATM_TRANS_OUT_BATM_DP_INST, BatmTransOutBatmDpInstRootMessage.class,
+                Described.of("instructionId=%s, status=%s".formatted(instructionId, status),
+                        m -> instructionId.equals(m.getInstructionId()) && status.equals(m.getStatus())),
+                Duration.ofSeconds(timeoutInSecs));
     }
 
     private BatmTransOutBatmDptransRootMessage awaitTransactionNew(String instructionId) {
-        return (BatmTransOutBatmDptransRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_TRANS, List.of(instructionId, NEW), long_timeout);
+        return KafkaHelper.await(BATM_TRANS_OUT_BATM_DP_TRANS, BatmTransOutBatmDptransRootMessage.class,
+                Described.of("instructionId=%s, status=%s".formatted(instructionId, NEW),
+                        m -> instructionId.equals(m.getInstructionId()) && NEW.equals(m.getStatus())),
+                Duration.ofSeconds(long_timeout));
     }
 
     private BatmTransOutBatmDptransRootMessage awaitTransactionEvent(String transactionId, String status, long timeoutInSecs) {
-        return (BatmTransOutBatmDptransRootMessage) KafkaHelper.getLastRecord(BATM_TRANS_OUT_BATM_DP_TRANS, List.of(transactionId, status), timeoutInSecs);
+        return KafkaHelper.await(BATM_TRANS_OUT_BATM_DP_TRANS, BatmTransOutBatmDptransRootMessage.class,
+                Described.of("transactionId=%s, status=%s".formatted(transactionId, status),
+                        m -> transactionId.equals(m.getTransactionId()) && status.equals(m.getStatus())),
+                Duration.ofSeconds(timeoutInSecs));
     }
 
     /* ******************************
@@ -327,8 +343,8 @@ public class BatmDpStreamingTests extends BaseAPIState {
      * Сообщение ФИ для транзакционного мониторинга ищется по atmId и статусу.
      */
     private void checkUaspInstructionMessage(String atmId, String status) {
-//        awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
-//                fields("/Object/CashMachine/Id/Id", atmId, "/Object/Status", status), long_timeout);
+        awaitUaspMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
+                fields("/Object/CashMachine/Id/Id", atmId, "/Object/Status", status));
     }
 
     /**
@@ -336,15 +352,27 @@ public class BatmDpStreamingTests extends BaseAPIState {
      * а сообщение ФТ ищется по его идентификатору (Object.Instruction.Id.Id ФТ = Object.Id.Id ФИ) и статусу.
      */
     private void checkUaspTransactionMessage(String atmId, String status) {
-//        JsonNode uaspInstruction = awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
-//                fields("/Object/CashMachine/Id/Id", atmId), long_timeout);
-//        String uaspInstructionId = uaspInstruction.at("/Object/Id/Id").asText();
-//        awaitMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION,
-//                fields("/Object/Instruction/Id/Id", uaspInstructionId, "/Object/Status", status), long_timeout);
+        JsonNode uaspInstruction = awaitUaspMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION,
+                fields("/Object/CashMachine/Id/Id", atmId));
+        String uaspInstructionId = uaspInstruction.at("/Object/Id/Id").asText();
+        awaitUaspMessage(UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION,
+                fields("/Object/Instruction/Id/Id", uaspInstructionId, "/Object/Status", status));
     }
 
+    private JsonNode awaitUaspMessage(KafkaTopic topic, Map<String, String> expectedFields) {
+        String message = KafkaHelper.awaitRaw(topic, jsonFieldsEqual(expectedFields), Duration.ofSeconds(long_timeout));
+        try {
+            return MAPPER.readTree(message);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Не удалось разобрать сообщение из топика '%s': %s".formatted(topic.getTopicName(), message), e);
+        }
+    }
+
+    /**
+     * Пока критерий поиска в ODS не определён, шаг падает с явной ошибкой (см. {@link #odsOutboxMessageCondition}).
+     */
     private void checkOdsOutboxMessage(String entityId) {
-//        KafkaHelper.getRecord(ODS_BATMADMIN_OUTBOX, odsOutboxMessageCondition(entityId), long_timeout, );
+        KafkaHelper.awaitRaw(ODS_BATMADMIN_OUTBOX, odsOutboxMessageCondition(entityId), Duration.ofSeconds(long_timeout));
     }
 
     /**

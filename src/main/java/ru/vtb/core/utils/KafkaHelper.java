@@ -10,7 +10,10 @@ import ru.vtb.core.data.static_data.KafkaTopic;
 import ru.vtb.core.utils.kafka.KafkaClusterRuntime;
 import ru.vtb.core.utils.kafka.KafkaMessage;
 import ru.vtb.core.utils.kafka.KafkaRuntimeRegistry;
+import ru.vtb.core.utils.kafka.KafkaSearch;
 import ru.vtb.core.utils.kafka.TopicStore;
+import ru.vtb.core.common.EnvConstants;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -22,8 +25,76 @@ import java.util.function.Predicate;
 
 public class KafkaHelper {
 
+    private static volatile KafkaSearch search;
+
     private KafkaHelper() {
     }
+
+    /* ******************************************************************************************
+     *  Новый API поиска (docs/kafka-design.md, раздел 6). Ищет среди всех сообщений с начала прогона,
+     *  возвращает последнее по timestamp; при таймауте — ошибка с диагностикой и вложением Allure.
+     * ******************************************************************************************/
+
+    /**
+     * @return последнее (по timestamp) сообщение типа T, удовлетворяющее условию; сообщения, которые не
+     * десериализуются в T, пропускаются (и показываются в тексте ошибки при таймауте)
+     */
+    public static <T> T await(KafkaTopic topic, Class<T> type, Predicate<T> condition, Duration timeout) {
+        return search().await(target(topic), type, condition, timeout);
+    }
+
+    /**
+     * @return ровно expectedCount сообщений типа T по условию (в порядке timestamp); меньше за таймаут или больше — падение
+     */
+    public static <T> List<T> awaitAll(KafkaTopic topic, Class<T> type, Predicate<T> condition, int expectedCount, Duration timeout) {
+        return search().awaitAll(target(topic), type, condition, expectedCount, timeout);
+    }
+
+    /**
+     * @return текст последнего (по timestamp) сообщения, удовлетворяющего условию
+     */
+    public static String awaitRaw(KafkaTopic topic, Predicate<String> condition, Duration timeout) {
+        return search().awaitRaw(target(topic), condition, timeout);
+    }
+
+    /**
+     * Падает, если за окно ожидания (или раньше, с начала прогона) в топике есть подходящее сообщение.
+     *
+     * @param window явное окно ожидания, обязательно
+     */
+    public static void assertNoMessage(KafkaTopic topic, Predicate<String> condition, Duration window) {
+        search().assertNoMessage(target(topic), condition, window);
+    }
+
+    private static KafkaSearch.Target target(KafkaTopic topic) {
+        TopicStore store = storeOf(topic);
+        return new KafkaSearch.Target(topic.getTopicName(), topic.getCluster().getConfigName(), store, () -> readingError(topic));
+    }
+
+    private static KafkaSearch search() {
+        KafkaSearch current = search;
+        if (current == null) {
+            synchronized (KafkaHelper.class) {
+                if (search == null) {
+                    String lastN = EnvConstants.getProperty("kafka.report.last.n");
+                    int n;
+                    try {
+                        n = lastN == null || lastN.isBlank() ? 10 : Integer.parseInt(lastN.trim());
+                    } catch (NumberFormatException e) {
+                        throw new IllegalStateException("Некорректное значение 'kafka.report.last.n': '%s'".formatted(lastN), e);
+                    }
+                    search = new KafkaSearch(Duration.ofMillis(200), n, KafkaSearch.Reporter.ALLURE, new ObjectMapper(),
+                            java.time.Clock.systemUTC());
+                }
+                current = search;
+            }
+        }
+        return current;
+    }
+
+    /* ******************************************************************************************
+     *  Старые методы (удалить в 2.5)
+     * ******************************************************************************************/
 
     private enum SearchStrategy {
         NONE,
@@ -165,6 +236,7 @@ public class KafkaHelper {
             message = CommonHelper.serializeToJsonStringIgnoringNullableFields(object);
         }
         Log.step("Отправляем сообщение '%s' в топик '%s'".formatted(message, topic.getTopicName()));
+        KafkaSearch.Reporter.ALLURE.attach("Kafka → " + topic.getTopicName(), "text/plain", message);
         Future<RecordMetadata> future = null;
         try {
             // один producer на кластер топика (раньше — новый producer кластера BATM на каждое сообщение)
