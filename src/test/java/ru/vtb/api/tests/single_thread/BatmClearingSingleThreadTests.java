@@ -3,6 +3,7 @@ package ru.vtb.api.tests.single_thread;
 import io.qameta.allure.TmsLink;
 import org.joda.time.DateTime;
 import org.testng.Assert;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 import ru.vtb.api.state.BaseAPIState;
 import ru.vtb.core.utils.CommonHelper;
@@ -15,6 +16,9 @@ import static ru.vtb.core.data.static_data.KafkaTopic.SUTP_EVENTS;
 
 public class BatmClearingSingleThreadTests extends BaseAPIState {
 
+    // НЕРАБОЧИЙ: сообщение SUTP_EVENTS ищется только по банковской дате — поле, идентифицирующее
+    // сообщение этого теста, не определено (см. docs/kafka-design.md)
+    @Ignore
     @Test(description = "Проверка автоматической отправки уведомления в СУТП")
     @TmsLink("BATM-283")
     public void testBATM283() {

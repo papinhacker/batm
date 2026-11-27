@@ -4,29 +4,9 @@
 
     <test name="BATM-415">
         <classes>
-            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
+            <class name="ru.vtb.api.tests.batm_trans_agr.BatmTransAgrTests">
                 <methods>
                     <include name="testBATM415"/>
-                </methods>
-            </class>
-        </classes>
-    </test>
-
-    <test name="BATM-485">
-        <classes>
-            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
-                <methods>
-                    <include name="testBATM485"/>
-                </methods>
-            </class>
-        </classes>
-    </test>
-
-    <test name="BATM-486">
-        <classes>
-            <class name="ru.vtb.api.tests.batm_trans_agr.to_aggregator.BatmTransAgrToAggregatorTests">
-                <methods>
-                    <include name="testBATM486"/>
                 </methods>
             </class>
         </classes>
