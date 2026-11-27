@@ -3,6 +3,7 @@ package ru.vtb.api.tests.batm_zod;
 import io.qameta.allure.TmsLink;
 import io.restassured.path.json.JsonPath;
 import org.joda.time.DateTime;
+import org.testng.annotations.Ignore;
 import org.testng.annotations.Test;
 import ru.vtb.api.state.BaseAPIState;
 import ru.vtb.core.models.common.CommonModelHelper;
@@ -21,6 +22,9 @@ import static ru.vtb.core.data.static_data.KafkaTopic.*;
 
 public class BatmZodTests extends BaseAPIState {
 
+    // НЕРАБОЧИЙ: два сообщения SUTP_EVENTS по одному requestId должны различаться статусом, а тест ищет оба
+    // только по requestId и полагается на удаление найденного сообщения из хранилища (см. docs/kafka-design.md)
+    @Ignore
     @Test(description = "Проверка обработки сообщения о выгрузке в Агрегатор")
     @TmsLink("BATM-257")
     public void testBATM257() {

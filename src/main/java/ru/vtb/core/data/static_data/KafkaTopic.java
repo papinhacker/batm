@@ -73,10 +73,10 @@ public enum KafkaTopic {
     BATM_TRANS_OUT_BATM_DP_STREAMING("batm_trans-out-batm_dp-streaming"),
     BATM_DP_IN_BATM_DEVICES_ATM("batm_dp-in-batm_devices-atm", BatmDpInBatmDevicesAtmRootMessage.class),
 
-    //TODO заглушка: имя топика UASP для ФИ (в тест-кейсах: ***_batm_uasp_retail_adm_atm_cash_money_transfer_instruction)
-    UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION("STUB_batm_uasp_retail_adm_atm_cash_money_transfer_instruction", KafkaCluster.UASP),
-    //TODO заглушка: имя топика UASP для ФТ (в тест-кейсах: ***_batm_uasp_retail_adm_atm_cash_money_transfer_transaction)
-    UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION("STUB_batm_uasp_retail_adm_atm_cash_money_transfer_transaction", KafkaCluster.UASP),
+    //TODO имя топика UASP для ФИ на тестовом контуре (ift_); для preprod нужен префикс контура (docs/kafka-design.md)
+    UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_INSTRUCTION("ift_batm_uasp_retail_adm_atm_cash_money_transfer_instruction", KafkaCluster.UASP),
+    //TODO имя топика UASP для ФТ на тестовом контуре (ift_); для preprod нужен префикс контура (docs/kafka-design.md)
+    UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_TRANSACTION("ift_batm_uasp_retail_adm_atm_cash_money_transfer_transaction", KafkaCluster.UASP),
     ODS_BATMADMIN_OUTBOX("tsss.batmadmin.outbox", KafkaCluster.ODS);
 
     private final String topicName;

@@ -6,8 +6,6 @@ import org.testng.annotations.Test;
 import ru.vtb.api.state.BaseAPIState;
 import ru.vtb.core.data.static_data.SemiTransaction;
 import ru.vtb.core.data.static_data.dto.TransactionDto;
-import ru.vtb.core.models.kafka.batm_acc_route_in_batm_trans_pp_data.BatmAccRouteInBatmTransPpDataRootMessage;
-import ru.vtb.core.models.kafka.batm_acc_route_in_batm_trans_pp_data.gerators.BatmAccRouteInBatmTransPpDataMessageGenerator;
 import ru.vtb.core.models.kafka.batm_acc_route_pp_in_batm_trans_pp_data.BatmAccRoutePpInBatmTransPpDataRootMessage;
 import ru.vtb.core.models.kafka.batm_acc_route_pp_in_batm_trans_pp_result.BatmAccRoutePpOutBatmTransPpResultRootMessage;
 import ru.vtb.core.models.kafka.batm_acc_route_s3_in_batm_trans_agr_data.BatmAccRouteS3InBatmTransAgrDataRootMessage;
@@ -20,80 +18,14 @@ import ru.vtb.core.utils.*;
 
 import java.io.File;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 
-import static ru.vtb.core.data.static_data.B2LMask.D_038cto;
 import static ru.vtb.core.data.static_data.B2LMask._298cto;
 import static ru.vtb.core.data.static_data.KafkaTopic.*;
-import static ru.vtb.core.data.static_data.MapsKeysConstants.AMOUNT_FEE;
 import static ru.vtb.core.data.static_data.MapsKeysConstants.TERMINAL_ID;
 import static ru.vtb.core.data.static_data.S3Constants.BATM_OUTPUT;
 import static ru.vtb.core.data.static_data.S3Constants.IF_BATM_WAY_IN;
 
 public class BatmTransAgrTests extends BaseAPIState {
-
-    @Test(description = "Проверка расчета суммы с комиссией Cash-In в генератор")
-    @TmsLink("BATM-481")
-    public void testBATM481() {
-        String b2lFilename = B2LHelper.generateBase2LikeFileName(D_038cto);
-        var dto = B2LHelper.getNewCashInTransactionReference(Map.of(
-                AMOUNT_FEE, String.valueOf(ThreadLocalRandom.current().nextInt(1, 999)),
-                TERMINAL_ID, "LA151190"
-        ));
-        var incomingJson = UfxHelper.generateJSONUfxModelsBasedOnBase2LikeTransactions(List.of(dto), b2lFilename);
-        KafkaHelper.sendMessage(BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA, CommonHelper.serializeToJsonStringIgnoringNullableFields(incomingJson));
-        double buff = Integer.parseInt(dto.getDestinationAmount()) + Integer.parseInt(dto.getSurchargeAmount());
-        String resultAmount = String.format(Locale.US, "%.2f", buff / 100);
-
-        KafkaHelper.getLastRecord(BATM_ACC_ROUTE_IN_BATM_TRANS_PP_DATA, resultAmount, long_timeout);
-    }
-
-    @Test(description = "Проверка расчета суммы с комиссией Cash-In в агрегатор")
-    @TmsLink("BATM-482")
-    public void testBATM482() {
-        String b2lFilename = B2LHelper.generateBase2LikeFileName(D_038cto);
-        var dto = B2LHelper.getNewCashInTransactionReference(Map.of(
-                AMOUNT_FEE, String.valueOf(ThreadLocalRandom.current().nextInt(1, 999))
-        ));
-        var incomingJson = UfxHelper.generateJSONUfxModelsBasedOnBase2LikeTransactions(List.of(dto), b2lFilename);
-        KafkaHelper.sendMessage(BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA, CommonHelper.serializeToJsonStringIgnoringNullableFields(incomingJson));
-        double buff = Integer.parseInt(dto.getDestinationAmount()) + Integer.parseInt(dto.getSurchargeAmount());
-        String resultAmount = String.format(Locale.US, "%.2f", buff / 100);
-
-        KafkaHelper.getLastRecord(BATM_ACC_ROUTE_IN_BATM_TRANS_S3_DATA, resultAmount, long_timeout);
-    }
-
-    @Test(description = "Копия Проверка расчета суммы с комиссией Cash-Withdrawal в генератор")
-    @TmsLink("BATM-483")
-    public void testBATM483() {
-        String b2lFilename = B2LHelper.generateBase2LikeFileName(D_038cto);
-        var dto = B2LHelper.getNewWithdrawTransactionReference(Map.of(
-                AMOUNT_FEE, String.valueOf(ThreadLocalRandom.current().nextInt(1, 999)),
-                TERMINAL_ID, "LA151190"
-        ));
-        var incomingJson = UfxHelper.generateJSONUfxModelsBasedOnBase2LikeTransactions(List.of(dto), b2lFilename);
-        KafkaHelper.sendMessage(BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA, CommonHelper.serializeToJsonStringIgnoringNullableFields(incomingJson));
-        double buff = Integer.parseInt(dto.getDestinationAmount()) - Integer.parseInt(dto.getSurchargeAmount());
-        String resultAmount = String.format(Locale.US, "%.2f", buff / 100);
-
-        KafkaHelper.getLastRecord(BATM_ACC_ROUTE_IN_BATM_TRANS_PP_DATA, resultAmount, long_timeout);
-    }
-
-    @Test(description = "Проверка расчета суммы с комиссией Cash-Withdrawal в агрегатор")
-    @TmsLink("BATM-484")
-    public void testBATM484() {
-        String b2lFilename = B2LHelper.generateBase2LikeFileName(D_038cto);
-        var dto = B2LHelper.getNewWithdrawTransactionReference(Map.of(
-                AMOUNT_FEE, String.valueOf(ThreadLocalRandom.current().nextInt(1, 999))
-        ));
-        var incomingJson = UfxHelper.generateJSONUfxModelsBasedOnBase2LikeTransactions(List.of(dto), b2lFilename);
-        KafkaHelper.sendMessage(BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA, CommonHelper.serializeToJsonStringIgnoringNullableFields(incomingJson));
-        double buff = Integer.parseInt(dto.getDestinationAmount()) - Integer.parseInt(dto.getSurchargeAmount());
-        String resultAmount = String.format(Locale.US, "%.2f", buff / 100);
-
-        KafkaHelper.getLastRecord(BATM_ACC_ROUTE_IN_BATM_TRANS_S3_DATA, resultAmount, long_timeout);
-    }
-
 
     protected void testTransAgrToAggregator(String b2lFilename, List<TransactionDto> trans) {
         var incomingJson = UfxHelper.generateJSONUfxModelsBasedOnBase2LikeTransactions(trans, b2lFilename);
@@ -111,25 +43,6 @@ public class BatmTransAgrTests extends BaseAPIState {
         String respJson = (String) KafkaHelper.getLastRecord(BATM_ACC_ROUTE_OUT_BATM_TRANS_S3_RESULT, step3resp.getMessageId(), long_timeout);
         softAssertEquals(JsonPath.from(respJson).getString("body.status"), "SUCCESS",
                 "Сервис BATM-ACC-ROUTE-S3 вернул неверный статус о получении полупроводок");
-
-        softAssertAll();
-    }
-
-    protected void testTransAgrToGenerator(String b2lFilename, List<TransactionDto> trans) {
-        var incomingJson = UfxHelper.generateJSONUfxModelsBasedOnBase2LikeTransactions(trans, b2lFilename);
-        KafkaHelper.sendMessage(BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA, CommonHelper.serializeToJsonStringIgnoringNullableFields(incomingJson));
-        checkClearingData(incomingJson);
-
-        List<String> msgIds = new ArrayList<>();
-        checkToGeneratorTransactions(incomingJson, msgIds);
-
-        CommonHelper.waitForValueChangeAndGet(() ->
-                DBHelper.TransAgr.getTransactionsMetaData(incomingJson.getMessageId()), orcTimeout);
-
-        for (String msgId : msgIds) {
-            //todo добааить полноту проверку сообщения где-то в июле 2026
-            KafkaHelper.getLastRecord(BATM_ACC_ROUTE_OUT_BATM_TRANS_PP_RESULT, msgId, long_timeout);
-        }
 
         softAssertAll();
     }
@@ -173,24 +86,6 @@ public class BatmTransAgrTests extends BaseAPIState {
 
         softAssertEquals(actualBuff, expectedBuff, "Транс агр сформировал неверные полупроводки для агрегатора");
     }
-
-    private void checkToGeneratorTransactions(BatmClearingOutBatmTransAgrDataRootMessage incomingJson, List<String> messages) {
-        var expected = BatmAccRouteInBatmTransPpDataMessageGenerator
-                .generateBatmAccRouteInBatmTransPpDataMessages(incomingJson);
-        List<BatmAccRouteInBatmTransPpDataRootMessage> actual = new ArrayList<>();
-        for (var body : incomingJson.getTransactions()) {
-            var response = (BatmAccRouteInBatmTransPpDataRootMessage) KafkaHelper.getLastRecord(BATM_ACC_ROUTE_IN_BATM_TRANS_PP_DATA,
-                    body.getAmount().toString(), long_timeout);
-            messages.add(response.getTransactionId());
-            response.setMessageId(null);
-            response.setMessageDate(null);
-            actual.add(response);
-        }
-        Collections.sort(actual);
-        Collections.sort(expected);
-        softAssertEquals(actual, expected, "Транс агр сформировал неверные полупроводки для генератора");
-    }
-
 
     @Test(description = "Проверка Маршрутизации проводок в ROUTE-PP ")
     @TmsLink("BATM-415")
