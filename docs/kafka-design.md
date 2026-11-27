@@ -1,7 +1,7 @@
 # Дизайн Kafka-слоя auto-testing (BATM)
 
-Статус: предложение, код не написан. Ревизия кода, по которой составлен документ: ветка `claude/remove-unused-code`.
-Номера строк ниже — по этой ревизии.
+Статус: предложение, Kafka-слой не реализован. Ответы на вопросы от 27.11.2026 учтены (раздел 9).
+Номера строк ниже — по ветке `claude/kafka-design` после коммита `77b589d` (удаление устаревших кейсов, BATM-257/283 → `@Ignore`, `STUB_` → `ift_`).
 
 ## 0. Текущее состояние (что есть и что мешает)
 
@@ -36,6 +36,12 @@ kafka.<имя>.ssl.keystore.location=kafka/test-uasp-keystore.p12
 - `location` по умолчанию — текущее правило `kafka/<cenv>-batm-{truststore,keystore}.p12`; это поведение для BATM
   не меняется, файлы хранилищ не переименовываются.
 - Пароли читаются через `EnvConstants.getEncryptedProperty` (расшифровка `-Dekey`), остальные — `getProperty`.
+- Хранилища SSL сейчас у всех кластеров общие (решение), но `kafka.<имя>.ssl.*.location` позволяет задать
+  отдельные файлы для любого кластера без правки кода.
+- **Префикс имён топиков по контуру**: `kafka.<имя>.topic.prefix` (необязательно). В `KafkaTopic` имя хранится без
+  префикса, фактическое имя = префикс + имя. Нужно для UASP: на ift топики `ift_batm_uasp_retail_adm_atm_cash_money_transfer_*`.
+  До реализации в `KafkaTopic` прописаны имена ift (`ift_…`, раньше `STUB_…`); при переходе — `kafka.uasp.topic.prefix=ift_`
+  в `test.properties`, имя в enum без префикса. Префикс preprod — открытый вопрос.
 
 ### 1.2 Классы
 
@@ -104,7 +110,7 @@ record MessageId(String topic, int partition, long offset) {}
   `OrderKey = (timestamp, partition, offset)`; повторное получение того же `MessageId` не создаёт дубля.
 - **Порядок FIRST/LAST — по timestamp**, при равенстве — partition, затем offset. Оговорка: при `CreateTime`
   timestamp ставит продюсер сервиса; если его часы расходятся, порядок между партициями может не совпасть с реальным
-  (см. вопрос 12).
+  (открытый вопрос 6).
 - **Лимиты**: `kafka.store.max.messages.per.topic` (по умолчанию 50 000) и `kafka.store.ttl` (по умолчанию `PT60M`,
   считается от `receivedAt`). Вытеснение старейших делает consumer-поток после каждой пачки; число вытесненных
   учитывается и показывается в диагностике таймаута («вытеснено N сообщений — увеличьте лимит»).
@@ -118,9 +124,11 @@ record MessageId(String topic, int partition, long offset) {}
 - Старт runtime: `partitionsFor(topic)` для каждого топика кластера → `assign(все партиции)` → `seekToEnd(все)` →
   `position(tp)` для каждой партиции (вынуждает получить реальные позиции) → `CountDownLatch` готовности.
 - `onStart` ждёт готовность всех включённых кластеров не дольше `kafka.startup.timeout` (по умолчанию `PT60S`).
-  Таймаут или ошибка → ошибка кластера в `readingErrors` с понятным текстом, например:
-  «Kafka-кластер UASP: за 60 с не зафиксированы позиции партиций [topicA-0, topicA-3]; топик topicB не существует».
-  По умолчанию падают только тесты этого кластера (как сейчас для ошибок consumer) — см. вопрос 11.
+  **Решение: ошибка старта любого включённого кластера роняет весь прогон** — `onStart` бросает исключение с понятным
+  текстом, например: «Kafka-кластер UASP: за 60 с не зафиксированы позиции партиций [topicA-0, topicA-3];
+  топик topicB не существует». На ift код уже исправлен, поэтому падение сразу показывает проблему окружения.
+  Ошибка consumer **во время** прогона — как сейчас: падают тесты этого кластера, остальные продолжают.
+  Невключённый кластер (пустой `bootstrap.servers`) — не ошибка старта; его тесты падают с «кластер не настроен».
 - Новые партиции во время прогона: раз в `kafka.partitions.refresh` (по умолчанию `PT30S`) consumer-поток вызывает
   `partitionsFor`, новые партиции добавляет в `assign` и читает **с начала** (`seekToBeginning` только для них).
 - Последствие: сообщения, записанные до старта прогона, не видны. Тесты, которые ищут «старые» сообщения, падают —
@@ -132,13 +140,14 @@ record MessageId(String topic, int partition, long offset) {}
 
 | Тест | Где | Как полагается | Как переписать |
 |---|---|---|---|
-| BATM-349 | `BatmClearingTests.java:167` | цикл `ceil(2100/1000)=3` раза `getLastRecord(CLEARING_OUT, b2lFilename)` собирает пачки | `awaitAll(CLEARING_OUT, Root.class, m -> любая rrn из m ∈ rrn сгенерированных, 3, …)` (вопрос 3) |
-| BATM-257 | `BatmZodTests.java:32` и `:42` | `SUTP_EVENTS` по одному `transparentId` дважды; без удаления второй вызов сразу вернёт первое сообщение | два `await` с разным признаком сообщения (вопрос 4) |
-| BATM-485, BATM-486 (через `checkToGeneratorTransactions`) | `BatmTransAgrTests.java:182` | цикл по телам, поиск по сумме; при одинаковой сумме у двух тел второй вызов получил бы то же сообщение | поиск по полю, связывающему с исходной транзакцией (вопрос 1) |
+| BATM-349 | `BatmClearingTests.java:167` | цикл `ceil(2100/1000)=3` раза `getLastRecord(CLEARING_OUT, b2lFilename)` собирает пачки | `awaitAll(CLEARING_OUT, Root.class, m -> любая rrn из m ∈ rrn сгенерированных, 3, …)`; пачка 1000 подтверждена |
+| BATM-257 | `BatmZodTests.java:32` и `:42` | `SUTP_EVENTS` по одному `transparentId` дважды; без удаления второй вызов сразу вернёт первое сообщение | **помечен нерабочим** (`@Ignore`): два сообщения должны различаться статусом — при возврате в работу два `await` с разным статусом |
+| ~~BATM-485, BATM-486~~ | — | поиск по сумме в цикле | **удалены** как устаревшие вместе с BATM-481…484 и классом `BatmTransAgrToGeneratorTests` |
 
 Проверены и **не зависят** от удаления: `testPerformance` (`BatmAccRouteS3Tests.java:321`, разные `messageId`),
 BATM-415 (разные статусы), BATM-416 (`SUCCESS_PP`/`SUCCESS_GP`), BATM-658…665 (разные статусы).
-Неоднозначны, но не из-за удаления: BATM-347/348/418/435 — два входных сообщения с одним id, одно чтение (вопрос 6).
+Не зависят от удаления, но ищут ответ на второе («дублирующее») из двух входных сообщений с одним id: BATM-347/348/418/435
+(для 347/435 — открытый вопрос 1).
 
 ## 6. Новый API поиска (требование 6)
 
@@ -153,7 +162,7 @@ String awaitRaw(KafkaTopic topic, Predicate<String> condition, Duration timeout)
   если в хранилище несколько подходящих — возвращается **последнее по timestamp** (как сейчас LAST).
 - Десериализация — `CommonHelper.deserializeJsonToObject`; сообщение, которое не десериализуется в `T`,
   считается несовпадением и учитывается в диагностике. Исключение в самом предикате — тест падает сразу.
-- `awaitAll`: успех, когда совпадений ровно `expectedCount`; больше — падение со списком лишних (вопрос 14).
+- `awaitAll`: успех, когда совпадений **ровно** `expectedCount` (решение); больше — падение со списком лишних.
 - `assertNoMessage` ждёт всю `duration` и падает, если подходящее сообщение есть — в том числе пришедшее до вызова.
 - Описание условия для логов/ошибок: `Described.of("rrn=123", predicate)` (обёртка `Predicate` с `toString`),
   иначе `toString()` предиката.
@@ -171,39 +180,44 @@ String awaitRaw(KafkaTopic topic, Predicate<String> condition, Duration timeout)
 
 Правило: искать по уникальному идентификатору модели. Везде, где в сообщении есть rrn, — по rrn: имя B2L-файла даёт
 лишь 10 вариантов на маску в день. Поля указаны по моделям `ru.vtb.core.models.kafka.*`.
+Для raw-топиков (без модели) условие поиска остаётся прежним (подстроки) — через `awaitRaw` (решение).
 
 | Тест / метод | Строка | Топик | Сейчас ищем | Новый поиск |
 |---|---|---|---|---|
 | BATM-334 | BatmAccTests:52 | BATM_ACC_OUT_BATM_TRANS_ACC | номер счёта (подстрока) | `account` == номер счёта из запроса |
-| BATM-336 | BatmAccTests:100 | BATM_ACC_OUT_BATM_TRANS_REVERSAL_RESULT | atmId | `originalMessageId` == messageId запроса (вопрос 7) |
-| BATM-509 | BatmAccTests:161 | то же | accountId | `originalMessageId` == messageId запроса (вопрос 7) |
-| BATM-304…307 | BatmAccRouteS3Tests:135,157,185,242 | BATM_ACC_ROUTE_S3_OUT_BATM_TRANS_AGR_RESULT | originalMessageId | `originalMessageId` (242 — raw, вопрос 8) |
+| BATM-336 | BatmAccTests:100 | BATM_ACC_OUT_BATM_TRANS_REVERSAL_RESULT | atmId | `originalMessageId` == messageId запроса reversal (подтверждено) |
+| BATM-509 | BatmAccTests:161 | то же | accountId | `originalMessageId` == messageId запроса reversal (подтверждено) |
+| BATM-304…306 | BatmAccRouteS3Tests:135,157,185 | BATM_ACC_ROUTE_S3_OUT_BATM_TRANS_AGR_RESULT | originalMessageId | `originalMessageId` |
+| BATM-307, testPerformance | BatmAccRouteS3Tests:242,321 | то же (raw) | originalMessageId | `awaitRaw` с прежним условием |
 | BATM-306, 307 | BatmAccRouteS3Tests:220,271 | BATM_ZOD_IN_BATM_ACC_ROUTE_S3_LOAD_RESULT | zodMsg.messageId | `originalMessageId` |
-| testPerformance | BatmAccRouteS3Tests:321,349 | S3_OUT_…_RESULT | originalMessageId / zodMsg.messageId | `originalMessageId` |
-| BATM-279 | BatmBinTests:55 | SOLAR_OUT_RUN_JOB (raw) | имя BIN-файла | поле с именем файла (имя уникально — 10 случайных символов; путь в JSON — вопрос 8) |
+| testPerformance | BatmAccRouteS3Tests:349 | S3_OUT_…_RESULT | zodMsg.messageId | `originalMessageId` |
+| BATM-279 | BatmBinTests:55 | SOLAR_OUT_RUN_JOB (raw) | имя BIN-файла | `awaitRaw` с прежним условием (имя уникально — 10 случайных символов) |
 | BATM-242 | BatmClearingTests:41 | BATM_CLEARING_IN_BATM_DEVICES_ATM | id | `atmId` |
 | BATM-197, 310, 311, 312 | BatmSiorIntegrationTests:48,131,164,196 | то же | id | `atmId` |
 | BATM-197 | BatmSiorIntegrationTests:61 | BATM_DP_IN_BATM_DEVICES_ATM | id | `id` |
-| BATM-347, 348, 418, 435 | BatmSiorIntegrationTests:223,246,286,336 | BATM_ACC_IN_BATM_DEVICES_ACC | id | `atmId` + различитель второго сообщения, напр. для 348 `accounts[].number` (вопрос 6) |
-| checkUfxJson (338, 401…430, 505), 346, 415 | BatmClearingTests:87,120; BatmTransAgrTests:204 | BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA | имя B2L-файла | `transactions[].rrn` ∈ rrn сгенерированных транзакций (вопрос 3) |
-| BATM-349 | BatmClearingTests:167 | то же | имя файла, цикл | `awaitAll(..., 3)` по rrn (раздел 5) |
+| BATM-348 | BatmSiorIntegrationTests:246 | BATM_ACC_IN_BATM_DEVICES_ACC | id | ответ на второе (дублирующее) сообщение: `atmId` + `accounts[].number` == новый номер счёта |
+| BATM-418 | BatmSiorIntegrationTests:286 | то же | id | ответ на второе сообщение: `atmId` + в `accounts` есть добавленный счёт 643 |
+| BATM-347, 435 | BatmSiorIntegrationTests:223,336 | то же | id | ответ на второе сообщение; тела одинаковые, отличается только заголовок — **открытый вопрос 1** |
+| checkUfxJson (338, 401…430, 505), 346, 415 | BatmClearingTests:87,120; BatmTransAgrTests:99 | BATM_CLEARING_OUT_BATM_TRANS_AGR_DATA | имя B2L-файла | `transactions[].rrn` ∈ rrn сгенерированных транзакций (подтверждено) |
+| BATM-349 | BatmClearingTests:167 | то же | имя файла, цикл | `awaitAll(..., 3)` по rrn, пачка 1000 (подтверждено) |
 | BATM-422, 425, 426 | BatmClearingTests:295,339,354 | то же | имя файла, `needFail=true` | `assertNoMessage` по rrn сгенерированных |
 | BATM-658…665 | BatmDpStreamingTests:307,311,315,319 | BATM_TRANS_OUT_BATM_DP_INST / _DP_TRANS | rrn / instructionId / transactionId + статус (подстроки) | `rrn`/`instructionId`/`transactionId` + `status` (поля модели) |
-| BATM-658…665, шаги UASP | BatmDpStreamingTests:329–344 (закомментировано) | UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_* | — | `awaitRaw` + `jsonFieldsEqual(fields("/Object/CashMachine/Id/Id", atmId, "/Object/Status", status))` (вопрос 9) |
-| BATM-664, 665, шаг ODS | BatmDpStreamingTests:347 (закомментировано) | ODS_BATMADMIN_OUTBOX | — | критерий не определён (вопрос 9) |
-| BATM-416 | BatmOperationsSiorTests:41 | BATM_ACC_ROUTE_PP_IN_BATM_OPER_SIOR_PP_DATA | messageId входящего | `messageId`? или `transactionId` (вопрос 15) |
-| BATM-416 | BatmOperationsSiorTests:51,52 | BATM_ACC_ROUTE_PP_OUT_BATM_OPER_SIOR_PP_RESULT (raw) | transId + SUCCESS_PP/GP | поля transactionId + status (raw, вопрос 8) |
+| BATM-658…665, шаги UASP | BatmDpStreamingTests:329–344 (закомментировано) | UASP_RETAIL_ADM_ATM_CASH_MONEY_TRANSFER_* (`ift_…`) | — | **восстановить**: `awaitRaw` + `jsonFieldsEqual(fields("/Object/CashMachine/Id/Id", atmId, "/Object/Status", status))`; ФТ — по `/Object/Instruction/Id/Id` и статусу |
+| BATM-664, 665, шаг ODS | BatmDpStreamingTests:347 (закомментировано) | ODS_BATMADMIN_OUTBOX | — | **восстановить вызов**; пока критерия нет, шаг **падает с явной ошибкой** «критерий поиска ODS не определён» (решение) — **открытый вопрос 3** |
+| BATM-416 | BatmOperationsSiorTests:41 | BATM_ACC_ROUTE_PP_IN_BATM_OPER_SIOR_PP_DATA | messageId входящей инструкции (подстрока) | прежнее значение по полю модели — `messageId`? (**открытый вопрос 5**) |
+| BATM-416 | BatmOperationsSiorTests:51,52 | BATM_ACC_ROUTE_PP_OUT_BATM_OPER_SIOR_PP_RESULT (raw) | transId + SUCCESS_PP/GP | `awaitRaw` с прежним условием |
 | BATM-416 | BatmOperationsSiorTests:76 | BATM_OUT_SIORUS_INSTRUCTION | transId | `transactionId` |
-| BATM-481…484 | BatmTransAgrTests:48,63,79,94 | BATM_ACC_ROUTE_IN_BATM_TRANS_PP_DATA / _S3_DATA | сумма с комиссией | **вопрос 1** (в моделях нет rrn) |
-| testTransAgrToAggregator (337…478) | BatmTransAgrTests:104 | BATM_ACC_ROUTE_IN_BATM_TRANS_S3_DATA | rrn+authCode (подстрока) | `transactions[].aggregationId` содержит rrn+authCode? (**вопрос 2**) |
-| testTransAgrToAggregator | BatmTransAgrTests:111 | BATM_ACC_ROUTE_OUT_BATM_TRANS_S3_RESULT (raw) | messageId шага 3 | `originalMessageId`? (вопрос 8) |
-| testTransAgrToGenerator | BatmTransAgrTests:131 | BATM_ACC_ROUTE_OUT_BATM_TRANS_PP_RESULT (raw) | transactionId | поле transactionId (вопрос 8) |
-| checkToGeneratorTransactions (485, 486) | BatmTransAgrTests:182 | BATM_ACC_ROUTE_IN_BATM_TRANS_PP_DATA | `body.getAmount().toString()` | **вопрос 1** |
-| BATM-415 шаги 6–15 | BatmTransAgrTests:219–243 | PP_IN_…_PP_DATA, DP_INST, DP_TRANS, REPORT_IN_…, PP_OUT_…_RESULT | step3Id / step1Id / instrId + статус | `transactionId` / `transId` / `instructionId` + `status` по модели топика |
-| BATM-257 | BatmZodTests:32,35,39,42 | SUTP_EVENTS, ZOD_OUT_…_S3_EVENT, ZOD_IN_…_LOAD_RESULT | requestId | SUTP_EVENTS — `referenceId`? (**вопрос 4**); S3_EVENT — `messageId`?; LOAD_RESULT — `originalMessageId` |
-| BATM-351 | BatmZodTests:72,80 | ZOD_OUT_BATM_TRANS_AGR_ZOD, ZOD_IN_…_ZOD_RESULT (raw) | requestId | поле с requestId (вопрос 8) |
-| BATM-283 | BatmClearingSingleThreadTests:31 | SUTP_EVENTS | банковская дата | **вопрос 5** |
+| testTransAgrToAggregator (337…478) | BatmTransAgrTests:36 | BATM_ACC_ROUTE_IN_BATM_TRANS_S3_DATA | rrn+authCode (подстрока) | `transactions[].aggregationId` содержит rrn+authCode (подтверждено) |
+| testTransAgrToAggregator | BatmTransAgrTests:43 | BATM_ACC_ROUTE_OUT_BATM_TRANS_S3_RESULT (raw) | messageId шага 3 | `awaitRaw` с прежним условием |
+| BATM-415 шаги 6–15 | BatmTransAgrTests:114–138 | PP_IN_…_PP_DATA, DP_INST, DP_TRANS, REPORT_IN_…, PP_OUT_…_RESULT | step3Id / step1Id / instrId + статус | `transactionId` / `transId` / `instructionId` + `status` по модели топика |
+| ~~BATM-481…484, 485, 486, to_generator BATM-415~~ | — | ROUTE_IN_…_PP/S3_DATA | сумма | **удалены** как устаревшие |
+| BATM-257 | BatmZodTests | SUTP_EVENTS, ZOD_* | requestId | **нерабочий** (`@Ignore`) — открытый вопрос 4 |
+| BATM-351 | BatmZodTests:76,84 | ZOD_OUT_BATM_TRANS_AGR_ZOD, ZOD_IN_…_ZOD_RESULT (raw) | requestId | `awaitRaw` с прежним условием |
+| BATM-283 | BatmClearingSingleThreadTests | SUTP_EVENTS | банковская дата | **нерабочий** (`@Ignore`) — открытый вопрос 4 |
 | NotTests#testb2lGenerator | NotTests:72–126 | CLEARING_OUT | имя файла | `transactions[].rrn` (утилита, не в сьютах) |
+
+Последствие восстановления UASP/ODS: пока кластер UASP не настроен на ift (пустой `kafka.uasp.bootstrap.servers`),
+а критерий ODS не определён, BATM-658…665 будут красными. Это ожидаемо: сейчас эти шаги молча ничего не проверяют.
 
 ## 8. План реализации
 
@@ -218,29 +232,35 @@ String awaitRaw(KafkaTopic topic, Predicate<String> condition, Duration timeout)
 5. Миграция тестов по сьютам (по таблице раздела 7, сначала строки без вопросов), затем удаление старых методов.
 6. Итерация 2: убрать `System.exit` из `TestsRunner`.
 
-## 9. Вопросы, без которых нельзя начинать реализацию
+## 9. Вопросы
 
-1. **ROUTE_IN_…_PP_DATA / _S3_DATA** (BATM-481…484, `checkToGeneratorTransactions`): по какому полю сообщение
-   связано с исходной транзакцией? В моделях нет rrn; сейчас ищем по сумме (подстрока).
-2. **testTransAgrToAggregator**: содержит ли `transactions[].aggregationId` строку rrn+authCode (как `SemiTransaction:35`)
-   и в каком формате (`WAY4_…`/`BATM_…`)?
-3. **CLEARING_OUT**: подтвердите поиск по `transactions[].rrn` и размер пачки 1000 транзакций (BATM-349 → 3 сообщения).
-4. **BATM-257**: чем различаются два сообщения `SUTP_EVENTS` по одному запросу (`eventName`/`statusCode`?) и в каком
-   поле requestId (`referenceId`?).
-5. **BATM-283**: какое поле, кроме банковской даты, идентифицирует сообщение `SUTP_EVENTS` этого теста?
-6. **BATM-347/348/418/435**: на какое из двух входных сообщений ожидается ответ в `BATM_ACC_IN_BATM_DEVICES_ACC`
-   и по какому полю его отличить (для 348 — новый `accounts[].number`?)?
-7. **BATM-336/509**: в `…_REVERSAL_RESULT` поле `originalMessageId` равно messageId запроса reversal?
-8. **Raw-топики** (без модели: `ROUTE_OUT_…_S3/PP_RESULT`, `PP_OUT_…_OPER_SIOR_PP_RESULT`, `SOLAR_OUT_RUN_JOB`,
-   `ZOD_OUT_BATM_TRANS_AGR_ZOD`, `ZOD_IN_…_ZOD_RESULT`): пример сообщения или путь к идентификатору.
-9. **UASP/ODS**: реальные имена топиков UASP (сейчас `STUB_…`), критерий поиска в `tsss.batmadmin.outbox`;
-   восстанавливать ли закомментированные проверки UASP/ODS в BATM-658…665 в рамках этой работы?
-10. **SSL других кластеров**: будут свои хранилища (тогда имена файлов) или всегда общие с BATM?
-11. **Ошибка старта кластера** (позиции не зафиксированы за таймаут): падают только тесты этого кластера (как сейчас
-    для ошибок consumer) или весь прогон?
-12. **Значения по умолчанию**: `kafka.store.max.messages.per.topic`, `kafka.store.ttl`, `kafka.startup.timeout`;
-    тип timestamp на топиках — CreateTime или LogAppendTime (влияет на надёжность порядка FIRST/LAST)?
-13. **preprod**: есть ли в его файле Kafka-ключи кроме `bootstrap.servers` и четырёх `ssl.*` — чтобы инструкция
-    из 1.3 была полной?
-14. **awaitAll**: «ровно `expectedCount`» (лишние — падение) или «не меньше»?
-15. **BATM-416**: в `PP_IN_…_OPER_SIOR_PP_DATA` поле `messageId` — это messageId входящей инструкции или новый?
+### Закрыты (ответы 27.11.2026)
+
+| Вопрос | Решение |
+|---|---|
+| Поле для ROUTE_IN_…_PP/S3_DATA (481…484, генератор) | кейсы устарели — удалены (BATM-481…484, класс `BatmTransAgrToGeneratorTests`: 415/485/486) |
+| `aggregationId` содержит rrn+authCode | да |
+| CLEARING_OUT: поиск по `transactions[].rrn`, пачка 1000 | да |
+| BATM-257: различие двух SUTP_EVENTS | статусы должны различаться; кейс помечен нерабочим |
+| BATM-347/348/418/435: какой ответ ожидается | на дублирующее (второе) сообщение |
+| reversal: `originalMessageId` = messageId запроса | да |
+| raw-топики | поиск оставить как есть (через `awaitRaw`) |
+| UASP/ODS | `STUB_` → `ift_` для тестового контура; проверки восстанавливать; шаг ODS без критерия падает с явной ошибкой |
+| SSL других кластеров | сейчас общие; возможность задать хранилища на кластер заложить (`kafka.<имя>.ssl.*.location`) |
+| Ошибка старта кластера | падает весь прогон |
+| `awaitAll` | ровно `expectedCount` |
+| BATM-283 | помечен нерабочим |
+
+### Открыты
+
+1. **BATM-347/435**: второе сообщение отличается от первого только заголовком. Сколько ответов приходит в
+   `BATM_ACC_IN_BATM_DEVICES_ACC` на пару входных (один или два) и связан ли `messageId` ответа с заголовком входного?
+   Без этого ответ на «дублирующее» не отличить от ответа на первое.
+2. **Префикс UASP-топиков на preprod** (`kafka.uasp.topic.prefix`).
+3. **Критерий поиска в ODS** `tsss.batmadmin.outbox` (до ответа шаг ODS в BATM-664/665 падает с явной ошибкой).
+4. **BATM-257/283** — что нужно, чтобы вернуть в работу: статусы двух сообщений SUTP_EVENTS (257) и поле,
+   идентифицирующее сообщение SUTP_EVENTS теста (283).
+5. **BATM-416**: поле `messageId` в `PP_IN_…_OPER_SIOR_PP_DATA` — это messageId входящей инструкции?
+6. **Значения по умолчанию** (`kafka.store.max.messages.per.topic`=50 000, `kafka.store.ttl`=PT60M,
+   `kafka.startup.timeout`=PT60S) и тип timestamp на топиках (CreateTime/LogAppendTime) — пока приняты предложенные.
+7. **preprod**: есть ли в его файле Kafka-ключи кроме `bootstrap.servers` и четырёх `ssl.*` (для инструкции из 1.3).
