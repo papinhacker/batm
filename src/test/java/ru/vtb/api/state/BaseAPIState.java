@@ -16,7 +16,6 @@ import ru.vtb.api.services.SaveAccountService;
 import ru.vtb.core.common.EnvConstants;
 import ru.vtb.core.common.SoftAssertVerification;
 import ru.vtb.core.common.listeners.TestNGListener;
-import ru.vtb.core.utils.KafkaClient;
 import ru.vtb.core.utils.S3Service;
 
 import java.util.Map;

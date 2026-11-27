@@ -1,5 +1,7 @@
 package ru.vtb.core.data.static_data;
 
+import ru.vtb.core.utils.kafka.KafkaClusterConfig;
+
 import ru.vtb.core.models.kafka.batm_acc_in_batm_devices_acc.BatmAccInBatmDevicesAccRootMessage;
 import ru.vtb.core.models.kafka.batm_acc_in_batm_trans_acc_result.BatmAccInBatmTransAccResultRootMessage;
 import ru.vtb.core.models.kafka.batm_acc_in_batm_trans_reversal.BatmAccInBatmTransReversalRootMessage;
@@ -29,8 +31,6 @@ import ru.vtb.core.models.kafka.sutp_to_batm.SutpToBatmRootMessage;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 public enum KafkaTopic {
 
@@ -80,13 +80,11 @@ public enum KafkaTopic {
     ODS_BATMADMIN_OUTBOX("tsss.batmadmin.outbox", KafkaCluster.ODS);
 
     private final String topicName;
-    private final Map<Long, String> topicMap;
     private final Class<?> defaultDeserializationClass;
     private final KafkaCluster cluster;
 
     KafkaTopic(String topicName, Class<?> clazz, KafkaCluster cluster) {
         this.topicName = topicName;
-        this.topicMap = new ConcurrentHashMap<>();
         this.defaultDeserializationClass = clazz;
         this.cluster = cluster;
     }
@@ -103,24 +101,15 @@ public enum KafkaTopic {
         this(topicName, String.class, KafkaCluster.BATM);
     }
 
-    public static Map<Long, String> getTopicStorageByName(KafkaCluster cluster, String topicName) {
-        for (KafkaTopic topic : values()) {
-            if (topic.getCluster() == cluster && topicName.equals(topic.getTopicName()))
-                return topic.getTopicMap();
-        }
-        throw new RuntimeException("Unable to recognize topic by provided topic name");
-    }
-
     public static List<String> getTopicsNames(KafkaCluster cluster) {
         return Arrays.stream(values()).filter(t -> t.getCluster() == cluster).map(KafkaTopic::getTopicName).toList();
     }
 
+    /**
+     * @return имя топика на контуре: префикс кластера (kafka.&lt;имя&gt;.topic.prefix, по умолчанию пусто) + имя
+     */
     public String getTopicName() {
-        return this.topicName;
-    }
-
-    public Map<Long, String> getTopicMap() {
-        return this.topicMap;
+        return KafkaClusterConfig.of(cluster).getTopicPrefix() + this.topicName;
     }
 
     public Class<?> getDefClass() {
